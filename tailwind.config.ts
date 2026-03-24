@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -56,6 +60,15 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        circuit: {
+          grid: "hsl(var(--circuit-grid))",
+          wire: "hsl(var(--circuit-wire))",
+          "wire-active": "hsl(var(--circuit-wire-active))",
+          "node-bg": "hsl(var(--circuit-node-bg))",
+          "node-border": "hsl(var(--circuit-node-border))",
+          handle: "hsl(var(--circuit-handle))",
+          label: "hsl(var(--circuit-label))",
         },
       },
       borderRadius: {
