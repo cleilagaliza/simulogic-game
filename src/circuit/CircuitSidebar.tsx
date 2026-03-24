@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ToggleLeft, Circle, Lightbulb, Ban, GitMerge, GitFork } from 'lucide-react';
+import { ToggleLeft, Circle, Lightbulb, Ban, GitMerge, GitFork, Zap, ShieldOff, ShieldClose, Shuffle, ShieldX } from 'lucide-react';
 
 interface DraggableItemProps {
   type: string;
@@ -29,7 +29,7 @@ const CircuitSidebar = memo(() => {
   return (
     <div className="w-56 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col h-full overflow-y-auto">
       <div className="p-4 border-b border-sidebar-border">
-        <h1 className="text-sm font-bold tracking-tight text-sidebar-primary-foreground" style={{ color: 'hsl(var(--sidebar-primary))' }}>
+        <h1 className="text-sm font-bold tracking-tight" style={{ color: 'hsl(var(--sidebar-primary))' }}>
           ⚡ Logic Simulator
         </h1>
         <p className="text-[10px] text-sidebar-foreground/60 mt-0.5">Arraste os componentes</p>
@@ -41,6 +41,7 @@ const CircuitSidebar = memo(() => {
         </div>
         <DraggableItem type="toggleSwitch" label="Toggle Switch" icon={<ToggleLeft size={16} />} />
         <DraggableItem type="pushButton" label="Push Button" icon={<Circle size={16} />} />
+        <DraggableItem type="voltageSource" label="Fonte (VCC)" icon={<Zap size={16} />} />
 
         <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
           Saídas
@@ -53,6 +54,10 @@ const CircuitSidebar = memo(() => {
         <DraggableItem type="not" label="NOT" icon={<Ban size={16} />} />
         <DraggableItem type="and" label="AND" icon={<GitMerge size={16} />} />
         <DraggableItem type="or" label="OR" icon={<GitFork size={16} />} />
+        <DraggableItem type="nand" label="NAND" icon={<ShieldOff size={16} />} />
+        <DraggableItem type="nor" label="NOR" icon={<ShieldClose size={16} />} />
+        <DraggableItem type="xor" label="XOR" icon={<Shuffle size={16} />} />
+        <DraggableItem type="xnor" label="XNOR" icon={<ShieldX size={16} />} />
       </div>
 
       <div className="mt-auto p-3 border-t border-sidebar-border">

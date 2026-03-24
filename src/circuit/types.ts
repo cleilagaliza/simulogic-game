@@ -12,6 +12,11 @@ export interface PushButtonData {
   value: LogicValue;
 }
 
+export interface VoltageSourceData {
+  type: 'voltageSource';
+  value: LogicValue;
+}
+
 export interface LedData {
   type: 'led';
   color: LedColor;
@@ -19,12 +24,12 @@ export interface LedData {
 }
 
 export interface GateData {
-  type: 'not' | 'and' | 'or';
+  type: 'not' | 'and' | 'or' | 'nand' | 'nor' | 'xor' | 'xnor';
   inputs: LogicValue[];
   output: LogicValue;
 }
 
-export type CircuitNodeData = ToggleSwitchData | PushButtonData | LedData | GateData;
+export type CircuitNodeData = ToggleSwitchData | PushButtonData | VoltageSourceData | LedData | GateData;
 
 export const LED_COLORS: Record<LedColor, string> = {
   red: 'hsl(0, 85%, 55%)',
