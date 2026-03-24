@@ -177,14 +177,14 @@ function CircuitCanvasInner() {
         y: event.clientY - bounds.top,
       });
 
-      const newNode: Node<CircuitNodeData> = {
+      const newNode = {
         id: getId(),
         type,
         position,
         data: createNodeData(type),
-      };
+      } as Node<CircuitNodeData>;
 
-      setNodes(nds => nds.concat(newNode));
+      setNodes(nds => [...nds, newNode]);
     },
     [setNodes, takeSnapshot]
   );
