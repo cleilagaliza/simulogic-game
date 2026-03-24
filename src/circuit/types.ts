@@ -14,7 +14,7 @@ export interface PushButtonData {
 
 export interface VoltageSourceData {
   type: 'voltageSource';
-  value: 1;
+  value: LogicValue;
 }
 
 export interface LedData {
