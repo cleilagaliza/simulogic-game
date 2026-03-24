@@ -7,7 +7,6 @@ export function propagateSignals(
 ): Node<CircuitNodeData>[] {
   const nodeMap = new Map(nodes.map(n => [n.id, { ...n, data: { ...n.data } }]));
   
-  // Build adjacency: targetId -> [{ sourceId, sourceHandle, targetHandle }]
   const incomingEdges = new Map<string, { sourceId: string; targetHandle: string }[]>();
   for (const edge of edges) {
     const list = incomingEdges.get(edge.target) || [];
@@ -15,7 +14,6 @@ export function propagateSignals(
     incomingEdges.set(edge.target, list);
   }
 
-  // Topological processing - iterate until stable
   let changed = true;
   let iterations = 0;
   while (changed && iterations < 50) {
@@ -52,6 +50,36 @@ export function propagateSignals(
           node.data = { ...node.data, inputs: inputVals, output };
           changed = true;
         }
+      } else if (node.data.type === 'nand') {
+        const inputVals = getMultiInputValues(incoming, nodeMap);
+        const output: LogicValue = inputVals.length > 0 && inputVals.every(v => v === 1) ? 0 : 1;
+        if (node.data.output !== output) {
+          node.data = { ...node.data, inputs: inputVals, output };
+          changed = true;
+        }
+      } else if (node.data.type === 'nor') {
+        const inputVals = getMultiInputValues(incoming, nodeMap);
+        const output: LogicValue = inputVals.some(v => v === 1) ? 0 : 1;
+        if (node.data.output !== output) {
+          node.data = { ...node.data, inputs: inputVals, output };
+          changed = true;
+        }
+      } else if (node.data.type === 'xor') {
+        const inputVals = getMultiInputValues(incoming, nodeMap);
+        const ones = inputVals.filter(v => v === 1).length;
+        const output: LogicValue = ones % 2 === 1 ? 1 : 0;
+        if (node.data.output !== output) {
+          node.data = { ...node.data, inputs: inputVals, output };
+          changed = true;
+        }
+      } else if (node.data.type === 'xnor') {
+        const inputVals = getMultiInputValues(incoming, nodeMap);
+        const ones = inputVals.filter(v => v === 1).length;
+        const output: LogicValue = ones % 2 === 0 ? 1 : 0;
+        if (node.data.output !== output) {
+          node.data = { ...node.data, inputs: inputVals, output };
+          changed = true;
+        }
       }
     }
   }
@@ -64,9 +92,15 @@ function getOutputValue(node: Node<CircuitNodeData>): LogicValue {
     case 'toggleSwitch':
     case 'pushButton':
       return node.data.value;
+    case 'voltageSource':
+      return 1;
     case 'not':
     case 'and':
     case 'or':
+    case 'nand':
+    case 'nor':
+    case 'xor':
+    case 'xnor':
       return node.data.output;
     case 'led':
       return node.data.value;
