@@ -25,7 +25,38 @@ const DraggableItem = ({ type, label, icon }: DraggableItemProps) => {
   );
 };
 
-const CircuitSidebar = memo(() => {
+const allInputs = [
+  { type: 'toggleSwitch', label: 'Toggle Switch', icon: <ToggleLeft size={16} /> },
+  { type: 'pushButton', label: 'Push Button', icon: <Circle size={16} /> },
+  { type: 'voltageSource', label: 'Fonte (VCC)', icon: <Zap size={16} /> },
+];
+
+const allOutputs = [
+  { type: 'led', label: 'LED', icon: <Lightbulb size={16} /> },
+];
+
+const allGates = [
+  { type: 'not', label: 'NOT', icon: <Ban size={16} /> },
+  { type: 'and', label: 'AND', icon: <GitMerge size={16} /> },
+  { type: 'or', label: 'OR', icon: <GitFork size={16} /> },
+  { type: 'nand', label: 'NAND', icon: <ShieldOff size={16} /> },
+  { type: 'nor', label: 'NOR', icon: <ShieldClose size={16} /> },
+  { type: 'xor', label: 'XOR', icon: <Shuffle size={16} /> },
+  { type: 'xnor', label: 'XNOR', icon: <ShieldX size={16} /> },
+];
+
+interface CircuitSidebarProps {
+  availableComponents?: string[];
+}
+
+const CircuitSidebar = memo(({ availableComponents }: CircuitSidebarProps) => {
+  const filter = (items: typeof allInputs) =>
+    availableComponents ? items.filter(i => availableComponents.includes(i.type)) : items;
+
+  const inputs = filter(allInputs);
+  const outputs = filter(allOutputs);
+  const gates = filter(allGates);
+
   return (
     <div className="w-56 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col h-full overflow-y-auto">
       <div className="p-4 border-b border-sidebar-border">
@@ -36,28 +67,38 @@ const CircuitSidebar = memo(() => {
       </div>
 
       <div className="p-3 flex flex-col gap-1">
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
-          Entradas
-        </div>
-        <DraggableItem type="toggleSwitch" label="Toggle Switch" icon={<ToggleLeft size={16} />} />
-        <DraggableItem type="pushButton" label="Push Button" icon={<Circle size={16} />} />
-        <DraggableItem type="voltageSource" label="Fonte (VCC)" icon={<Zap size={16} />} />
+        {inputs.length > 0 && (
+          <>
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
+              Entradas
+            </div>
+            {inputs.map(item => (
+              <DraggableItem key={item.type} {...item} />
+            ))}
+          </>
+        )}
 
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
-          Saídas
-        </div>
-        <DraggableItem type="led" label="LED" icon={<Lightbulb size={16} />} />
+        {outputs.length > 0 && (
+          <>
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
+              Saídas
+            </div>
+            {outputs.map(item => (
+              <DraggableItem key={item.type} {...item} />
+            ))}
+          </>
+        )}
 
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
-          Portas Lógicas
-        </div>
-        <DraggableItem type="not" label="NOT" icon={<Ban size={16} />} />
-        <DraggableItem type="and" label="AND" icon={<GitMerge size={16} />} />
-        <DraggableItem type="or" label="OR" icon={<GitFork size={16} />} />
-        <DraggableItem type="nand" label="NAND" icon={<ShieldOff size={16} />} />
-        <DraggableItem type="nor" label="NOR" icon={<ShieldClose size={16} />} />
-        <DraggableItem type="xor" label="XOR" icon={<Shuffle size={16} />} />
-        <DraggableItem type="xnor" label="XNOR" icon={<ShieldX size={16} />} />
+        {gates.length > 0 && (
+          <>
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
+              Portas Lógicas
+            </div>
+            {gates.map(item => (
+              <DraggableItem key={item.type} {...item} />
+            ))}
+          </>
+        )}
       </div>
 
       <div className="mt-auto p-3 border-t border-sidebar-border">

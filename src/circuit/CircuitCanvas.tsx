@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -24,7 +24,12 @@ import GateNode from './nodes/GateNode';
 import { propagateSignals, getEdgeSignalState } from './signalEngine';
 import { CircuitNodeData, LedColor, LogicValue } from './types';
 import { useUndoRedo } from './useUndoRedo';
-import type { Node } from 'reactflow';
+import type { Node, Edge } from 'reactflow';
+
+export interface CircuitCanvasRef {
+  getState: () => { nodes: Node<CircuitNodeData>[]; edges: Edge[] };
+  loadState: (nodes: Node<CircuitNodeData>[], edges: Edge[]) => void;
+}
 
 const nodeTypes = {
   toggleSwitch: ToggleSwitchNode,
@@ -86,7 +91,7 @@ function createNodeData(type: string): CircuitNodeData {
 let nodeId = 0;
 const getId = () => `node_${++nodeId}`;
 
-function CircuitCanvasInner() {
+const CircuitCanvasInner = forwardRef<CircuitCanvasRef, {}>((_, ref) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -126,6 +131,18 @@ function CircuitCanvasInner() {
       return propagated;
     });
   }, [setNodes, setEdges]);
+
+  useImperativeHandle(ref, () => ({
+    getState: () => ({ nodes: nodesRef.current as Node<CircuitNodeData>[], edges: edgesRef.current as Edge[] }),
+    loadState: (newNodes: Node<CircuitNodeData>[], newEdges: Edge[]) => {
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setTimeout(() => {
+        forceUpdate(c => c + 1);
+        runPropagation();
+      }, 50);
+    },
+  }));
 
   useEffect(() => {
     const handleToggle = (e: Event) => {
@@ -194,7 +211,6 @@ function CircuitCanvasInner() {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  // Snapshot before delete
   const handleNodesChange = useCallback((changes: any) => {
     const hasRemove = changes.some((c: any) => c.type === 'remove');
     if (hasRemove) takeSnapshot();
@@ -209,7 +225,6 @@ function CircuitCanvasInner() {
     if (hasRemove) setTimeout(runPropagation, 20);
   }, [onEdgesChange, takeSnapshot, runPropagation]);
 
-  // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
@@ -232,16 +247,12 @@ function CircuitCanvasInner() {
 
   return (
     <div ref={reactFlowWrapper} className="flex-1 h-full relative">
-      {/* Undo/Redo toolbar */}
       <div className="absolute top-3 left-3 z-10 flex gap-1">
         <button
           onClick={() => { undo(); setTimeout(runPropagation, 20); }}
           disabled={!canUndo()}
           className="p-2 rounded-lg border transition-colors disabled:opacity-30"
-          style={{
-            background: 'hsl(var(--card))',
-            borderColor: 'hsl(var(--border))',
-          }}
+          style={{ background: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
           title="Desfazer (Ctrl+Z)"
         >
           <Undo2 size={16} />
@@ -250,10 +261,7 @@ function CircuitCanvasInner() {
           onClick={() => { redo(); setTimeout(runPropagation, 20); }}
           disabled={!canRedo()}
           className="p-2 rounded-lg border transition-colors disabled:opacity-30"
-          style={{
-            background: 'hsl(var(--card))',
-            borderColor: 'hsl(var(--border))',
-          }}
+          style={{ background: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
           title="Refazer (Ctrl+Shift+Z)"
         >
           <Redo2 size={16} />
@@ -287,12 +295,15 @@ function CircuitCanvasInner() {
       </ReactFlow>
     </div>
   );
-}
+});
 
-export default function CircuitCanvas() {
-  return (
-    <ReactFlowProvider>
-      <CircuitCanvasInner />
-    </ReactFlowProvider>
-  );
-}
+CircuitCanvasInner.displayName = 'CircuitCanvasInner';
+
+const CircuitCanvas = forwardRef<CircuitCanvasRef, {}>((_, ref) => (
+  <ReactFlowProvider>
+    <CircuitCanvasInner ref={ref} />
+  </ReactFlowProvider>
+));
+
+CircuitCanvas.displayName = 'CircuitCanvas';
+export default CircuitCanvas;

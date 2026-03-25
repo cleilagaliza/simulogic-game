@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          total_score: number
           updated_at: string
           user_id: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          total_score?: number
           updated_at?: string
           user_id: string
         }
@@ -36,6 +38,70 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          total_score?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_projects: {
+        Row: {
+          circuit_data: Json
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          circuit_data: Json
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          circuit_data?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          level_number: number
+          score: number
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          level_number: number
+          score?: number
+          stars?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          level_number?: number
+          score?: number
+          stars?: number
           updated_at?: string
           user_id?: string
         }
@@ -46,7 +112,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_ranking: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          total_score: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
