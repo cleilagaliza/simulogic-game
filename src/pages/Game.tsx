@@ -122,7 +122,7 @@ const Game = () => {
         {result && (
           <div className="px-4 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
             {result.success ? (
-              <CheckCircle2 size={20} className="text-green-500" />
+              <CheckCircle2 size={20} className="text-primary" />
             ) : (
               <XCircle size={20} className="text-destructive" />
             )}
