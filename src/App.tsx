@@ -8,6 +8,7 @@ import LevelMap from "./pages/LevelMap";
 import Game from "./pages/Game";
 import Sandbox from "./pages/Sandbox";
 import Ranking from "./pages/Ranking";
+import Encyclopedia from "./pages/Encyclopedia";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/game/:levelId" element={<ProtectedRoute><Game /></ProtectedRoute>} />
           <Route path="/sandbox" element={<ProtectedRoute><Sandbox /></ProtectedRoute>} />
           <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+          <Route path="/encyclopedia" element={<ProtectedRoute><Encyclopedia /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/menu" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
