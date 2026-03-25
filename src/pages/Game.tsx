@@ -6,6 +6,7 @@ import CircuitCanvas, { type CircuitCanvasRef } from '@/circuit/CircuitCanvas';
 import CircuitSidebar from '@/circuit/CircuitSidebar';
 import { levels } from '@/game/levels';
 import { verifyCircuit, type VerifyResult } from '@/game/verifyCircuit';
+import TruthTableGrid, { type TruthTableGridRef } from '@/game/TruthTableGrid';
 import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -23,12 +24,21 @@ const Game = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canvasRef = useRef<CircuitCanvasRef>(null);
+  const tableRef = useRef<TruthTableGridRef>(null);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [isTraining, setIsTraining] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tableError, setTableError] = useState(false);
 
   const level = levels.find(l => l.id === Number(levelId));
+
+  useEffect(() => {
+    setResult(null);
+    setTableError(false);
+    setShowModal(false);
+    setIsTraining(false);
+  }, [levelId]);
 
   useEffect(() => {
     if (!user || !level) return;
@@ -50,6 +60,10 @@ const Game = () => {
       </div>
     );
   }
+
+  const isFillOnly = level.challengeType === 'fill_table';
+  const hasTable = level.challengeType === 'fill_table' || level.challengeType === 'interpret_table';
+  const hasCircuit = level.challengeType === 'circuit' || level.challengeType === 'interpret_table';
 
   const saveScore = async (res: VerifyResult) => {
     if (!user) return;
@@ -81,16 +95,56 @@ const Game = () => {
   };
 
   const handleVerify = async () => {
-    if (!canvasRef.current) return;
-    const { nodes, edges } = canvasRef.current.getState();
-    const res = verifyCircuit(nodes, edges, level.testCases);
-    setResult(res);
+    let circuitOk = true;
+    let tableOk = true;
+    let circuitResult: VerifyResult | null = null;
 
-    if (!isTraining) {
-      await saveScore(res);
+    // Verify circuit if needed
+    if (hasCircuit && canvasRef.current) {
+      const { nodes, edges } = canvasRef.current.getState();
+      circuitResult = verifyCircuit(nodes, edges, level.testCases);
+      circuitOk = circuitResult.success;
     }
 
-    if (res.success) {
+    // Verify truth table if needed
+    if (hasTable && tableRef.current) {
+      tableOk = tableRef.current.verify();
+    }
+
+    setTableError(!tableOk);
+
+    // Build final result
+    let finalResult: VerifyResult;
+    if (isFillOnly) {
+      // Fill-table only: pass/fail
+      finalResult = tableOk
+        ? { passed: 1, total: 1, score: 100, stars: 3, success: true }
+        : { passed: 0, total: 1, score: 0, stars: 0, success: false };
+    } else if (level.challengeType === 'interpret_table') {
+      // Both must pass
+      const bothOk = circuitOk && tableOk;
+      if (circuitResult) {
+        finalResult = {
+          ...circuitResult,
+          success: bothOk,
+          score: bothOk ? circuitResult.score : Math.min(circuitResult.score, 50),
+          stars: bothOk ? circuitResult.stars : 0,
+        };
+      } else {
+        finalResult = { passed: 0, total: 1, score: 0, stars: 0, success: false };
+      }
+    } else {
+      // Circuit only
+      finalResult = circuitResult || { passed: 0, total: 1, score: 0, stars: 0, success: false };
+    }
+
+    setResult(finalResult);
+
+    if (!isTraining) {
+      await saveScore(finalResult);
+    }
+
+    if (finalResult.success) {
       setShowModal(true);
     }
   };
@@ -99,6 +153,7 @@ const Game = () => {
     const nextLevel = level.id + 1;
     setShowModal(false);
     setResult(null);
+    setTableError(false);
     if (nextLevel < levels.length) {
       navigate(`/game/${nextLevel}`);
     } else {
@@ -107,12 +162,12 @@ const Game = () => {
     }
   };
 
-  const canAdvance = result && result.success && (result.score / 100) > 0.9;
+  const canAdvance = result && result.success;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
-      <CircuitSidebar availableComponents={level.availableComponents} />
-      <div className="flex-1 flex flex-col">
+      {hasCircuit && <CircuitSidebar availableComponents={level.availableComponents} />}
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card">
           <Button variant="ghost" size="icon" onClick={() => navigate('/levels')} title="Voltar ao Menu">
@@ -140,22 +195,47 @@ const Game = () => {
           <div className="px-4 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
             <XCircle size={20} className="text-destructive" />
             <span className="text-sm font-medium text-foreground">Tente novamente</span>
-            <span className="text-xs text-muted-foreground">
-              {result.passed}/{result.total} testes • {result.score} pts
-            </span>
+            {!isFillOnly && (
+              <span className="text-xs text-muted-foreground">
+                {result.passed}/{result.total} testes • {result.score} pts
+              </span>
+            )}
+            {tableError && hasTable && (
+              <span className="text-xs text-destructive">Tabela Verdade incorreta</span>
+            )}
             <div className="flex gap-0.5">
               {[1, 2, 3].map(s => (
                 <Star
                   key={s}
                   size={14}
-                  className={s <= result.stars ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}
+                  className={s <= (result?.stars ?? 0) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}
                 />
               ))}
             </div>
           </div>
         )}
 
-        <CircuitCanvas ref={canvasRef} />
+        {/* Main content area */}
+        <div className="flex-1 flex overflow-hidden">
+          {hasCircuit && (
+            <div className={hasTable ? 'flex-1 min-w-0' : 'flex-1'}>
+              <CircuitCanvas ref={canvasRef} />
+            </div>
+          )}
+          {hasTable && level.truthTable && (
+            <div className={hasCircuit ? 'w-72 border-l border-border overflow-auto p-2' : 'flex-1 flex items-center justify-center p-6'}>
+              <div className={hasCircuit ? '' : 'w-full max-w-lg'}>
+                <TruthTableGrid
+                  key={levelId}
+                  ref={tableRef}
+                  challenge={level.truthTable}
+                  mode={level.challengeType as 'fill_table' | 'interpret_table'}
+                  disabled={!!(result && result.success)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Success Modal */}
@@ -182,7 +262,7 @@ const Game = () => {
                 ))}
               </div>
               <span className="text-xs text-muted-foreground">
-                {result.passed}/{result.total} testes aprovados
+                {isFillOnly ? 'Tabela Verdade completa!' : `${result.passed}/${result.total} testes aprovados`}
               </span>
             </div>
           )}
