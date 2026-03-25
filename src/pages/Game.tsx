@@ -6,9 +6,17 @@ import CircuitCanvas, { type CircuitCanvasRef } from '@/circuit/CircuitCanvas';
 import CircuitSidebar from '@/circuit/CircuitSidebar';
 import { levels } from '@/game/levels';
 import { verifyCircuit, type VerifyResult } from '@/game/verifyCircuit';
-import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const Game = () => {
   const { levelId } = useParams<{ levelId: string }>();
@@ -17,6 +25,7 @@ const Game = () => {
   const canvasRef = useRef<CircuitCanvasRef>(null);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [isTraining, setIsTraining] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const level = levels.find(l => l.id === Number(levelId));
@@ -42,30 +51,22 @@ const Game = () => {
     );
   }
 
-  const handleVerify = () => {
-    if (!canvasRef.current) return;
-    const { nodes, edges } = canvasRef.current.getState();
-    const res = verifyCircuit(nodes, edges, level.testCases);
-    setResult(res);
-  };
-
-  const handleSaveScore = async () => {
-    if (!user || !result) return;
+  const saveScore = async (res: VerifyResult) => {
+    if (!user) return;
     setSaving(true);
     try {
       await (supabase as any).from('user_progress').upsert(
         {
           user_id: user.id,
           level_number: level.id,
-          score: result.score,
-          stars: result.stars,
-          completed: result.success,
-          completed_at: result.success ? new Date().toISOString() : null,
+          score: res.score,
+          stars: res.stars,
+          completed: res.success,
+          completed_at: res.success ? new Date().toISOString() : null,
         },
         { onConflict: 'user_id,level_number' }
       );
 
-      // Recalculate total score
       const { data: allProg } = await (supabase as any)
         .from('user_progress')
         .select('score')
@@ -73,24 +74,40 @@ const Game = () => {
 
       const totalScore = (allProg || []).reduce((sum: number, p: any) => sum + p.score, 0);
       await (supabase as any).from('profiles').update({ total_score: totalScore }).eq('user_id', user.id);
-
-      toast.success('Pontuação salva!');
     } catch {
       toast.error('Erro ao salvar pontuação.');
     }
     setSaving(false);
   };
 
+  const handleVerify = async () => {
+    if (!canvasRef.current) return;
+    const { nodes, edges } = canvasRef.current.getState();
+    const res = verifyCircuit(nodes, edges, level.testCases);
+    setResult(res);
+
+    if (!isTraining) {
+      await saveScore(res);
+    }
+
+    if (res.success) {
+      setShowModal(true);
+    }
+  };
+
   const handleNext = () => {
     const nextLevel = level.id + 1;
+    setShowModal(false);
+    setResult(null);
     if (nextLevel < levels.length) {
-      setResult(null);
       navigate(`/game/${nextLevel}`);
     } else {
       toast.success('Parabéns! Você completou todos os níveis!');
       navigate('/levels');
     }
   };
+
+  const canAdvance = result && result.success && (result.score / 100) > 0.9;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
@@ -118,17 +135,11 @@ const Game = () => {
           </Button>
         </div>
 
-        {/* Result overlay */}
-        {result && (
+        {/* Inline result feedback (non-success) */}
+        {result && !result.success && (
           <div className="px-4 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
-            {result.success ? (
-              <CheckCircle2 size={20} className="text-primary" />
-            ) : (
-              <XCircle size={20} className="text-destructive" />
-            )}
-            <span className="text-sm font-medium text-foreground">
-              {result.success ? 'Aprovado!' : 'Tente novamente'}
-            </span>
+            <XCircle size={20} className="text-destructive" />
+            <span className="text-sm font-medium text-foreground">Tente novamente</span>
             <span className="text-xs text-muted-foreground">
               {result.passed}/{result.total} testes • {result.score} pts
             </span>
@@ -141,23 +152,51 @@ const Game = () => {
                 />
               ))}
             </div>
-            <div className="flex gap-2 ml-auto">
-              {!isTraining && (
-                <Button size="sm" variant="outline" onClick={handleSaveScore} disabled={saving}>
-                  Salvar Pontuação
-                </Button>
-              )}
-              {result.success && (
-                <Button size="sm" onClick={handleNext}>
-                  Próximo <ArrowRight size={14} />
-                </Button>
-              )}
-            </div>
           </div>
         )}
 
         <CircuitCanvas ref={canvasRef} />
       </div>
+
+      {/* Success Modal */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="items-center text-center">
+            <Trophy className="h-12 w-12 text-primary mb-2" />
+            <DialogTitle className="text-xl">Nível Concluído!</DialogTitle>
+            <DialogDescription>
+              {isTraining ? 'Modo Treino — pontuação não salva.' : 'Pontuação salva automaticamente.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {result && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <span className="text-3xl font-bold text-foreground">{result.score} pts</span>
+              <div className="flex gap-1">
+                {[1, 2, 3].map(s => (
+                  <Star
+                    key={s}
+                    size={24}
+                    className={s <= result.stars ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {result.passed}/{result.total} testes aprovados
+              </span>
+            </div>
+          )}
+
+          <DialogFooter className="flex-row gap-2 sm:justify-center">
+            <Button variant="outline" onClick={() => { setShowModal(false); navigate('/levels'); }}>
+              Voltar ao Menu
+            </Button>
+            <Button onClick={handleNext} disabled={!canAdvance}>
+              Próximo Nível <ArrowRight size={14} />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
