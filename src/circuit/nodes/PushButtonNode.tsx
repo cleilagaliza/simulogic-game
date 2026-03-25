@@ -13,10 +13,10 @@ const PushButtonNode = memo(({ data, id }: NodeProps<PushButtonData>) => {
         Button
       </div>
       <button
-        onMouseDown={() => dispatchValue(1)}
-        onMouseUp={() => dispatchValue(0)}
-        onMouseLeave={() => dispatchValue(0)}
-        className="w-10 h-10 rounded-full border-2 transition-all duration-100 active:scale-95 focus:outline-none flex items-center justify-center"
+        onPointerDown={(e) => { e.stopPropagation(); dispatchValue(1); }}
+        onPointerUp={() => dispatchValue(0)}
+        onPointerLeave={() => dispatchValue(0)}
+        className="nodrag nopan w-10 h-10 rounded-full border-2 transition-all duration-100 active:scale-95 focus:outline-none flex items-center justify-center"
         style={{
           borderColor: data.value === 1 ? 'hsl(142, 70%, 45%)' : 'hsl(215, 15%, 75%)',
           backgroundColor: data.value === 1 ? 'hsl(142, 70%, 45%)' : 'hsl(var(--muted))',
