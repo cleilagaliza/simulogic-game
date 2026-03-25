@@ -3,9 +3,13 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import Auth from "./pages/Auth.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Menu from "./pages/Menu";
+import LevelMap from "./pages/LevelMap";
+import Game from "./pages/Game";
+import Sandbox from "./pages/Sandbox";
+import Ranking from "./pages/Ranking";
+import Auth from "./pages/Auth";
+import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -25,7 +29,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
+          <Route path="/levels" element={<ProtectedRoute><LevelMap /></ProtectedRoute>} />
+          <Route path="/game/:levelId" element={<ProtectedRoute><Game /></ProtectedRoute>} />
+          <Route path="/sandbox" element={<ProtectedRoute><Sandbox /></ProtectedRoute>} />
+          <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/menu" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
