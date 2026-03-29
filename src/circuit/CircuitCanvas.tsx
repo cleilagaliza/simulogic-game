@@ -21,6 +21,7 @@ import PushButtonNode from './nodes/PushButtonNode';
 import VoltageSourceNode from './nodes/VoltageSourceNode';
 import LedNode from './nodes/LedNode';
 import GateNode from './nodes/GateNode';
+import ProbeNode from './nodes/ProbeNode';
 import { propagateSignals, getEdgeSignalState } from './signalEngine';
 import { CircuitNodeData, LedColor, LogicValue } from './types';
 import { useUndoRedo } from './useUndoRedo';
@@ -43,6 +44,7 @@ const nodeTypes = {
   nor: GateNode,
   xor: GateNode,
   xnor: GateNode,
+  probe: ProbeNode,
 };
 
 function SignalEdge({
@@ -84,6 +86,7 @@ function createNodeData(type: string): CircuitNodeData {
     case 'nor': return { type: 'nor', inputs: [0, 0], output: 1 };
     case 'xor': return { type: 'xor', inputs: [0, 0], output: 0 };
     case 'xnor': return { type: 'xnor', inputs: [0, 0], output: 1 };
+    case 'probe': return { type: 'probe', value: 0 };
     default: return { type: 'toggleSwitch', value: 0 };
   }
 }

@@ -5,7 +5,7 @@ export interface TestCase {
   expectedOutputs: LogicValue[];
 }
 
-export type ChallengeType = 'circuit' | 'fill_table' | 'interpret_table';
+export type ChallengeType = 'circuit' | 'fill_table' | 'interpret_table' | 'waveform' | 'bit_weight';
 
 export interface TruthTableChallenge {
   inputLabels: string[];
@@ -13,6 +13,24 @@ export interface TruthTableChallenge {
   rows: { inputs: LogicValue[]; outputs: LogicValue[] }[];
   /** For 'fill_table': indices of output cells the user must fill (others shown) */
   hiddenOutputIndices?: number[];
+}
+
+export interface WaveformChallengeData {
+  gate: string;
+  timeSteps: number;
+  inputA: LogicValue[];
+  inputB: LogicValue[];
+  expectedOutput: LogicValue[];
+}
+
+export interface BitWeightChallengeData {
+  targetDecimal: number;
+  numBits: number;
+}
+
+/** Number of inputs for the 2^n formula quiz shown before the level */
+export interface FormulaQuizConfig {
+  numInputs: number;
 }
 
 export interface LevelDefinition {
@@ -25,6 +43,9 @@ export interface LevelDefinition {
   maxScore: number;
   challengeType: ChallengeType;
   truthTable?: TruthTableChallenge;
+  waveform?: WaveformChallengeData;
+  bitWeight?: BitWeightChallengeData;
+  formulaQuiz?: FormulaQuizConfig;
 }
 
 export const levels: LevelDefinition[] = [
@@ -421,6 +442,141 @@ export const levels: LevelDefinition[] = [
         { inputs: [1, 0, 1], outputs: [0, 1] },
         { inputs: [1, 1, 0], outputs: [0, 1] },
         { inputs: [1, 1, 1], outputs: [1, 1] },
+      ],
+      hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+    },
+  },
+  // === NEW: Waveform challenges ===
+  {
+    id: 21,
+    title: 'Onda AND',
+    description: 'Análise de tempo',
+    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta AND.',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'waveform',
+    waveform: {
+      gate: 'AND',
+      timeSteps: 8,
+      inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+      inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+      expectedOutput: [0, 0, 0, 1, 0, 1, 0, 0],
+    },
+  },
+  {
+    id: 22,
+    title: 'Onda OR',
+    description: 'Análise de tempo',
+    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta OR.',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'waveform',
+    waveform: {
+      gate: 'OR',
+      timeSteps: 8,
+      inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+      inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+      expectedOutput: [0, 1, 1, 1, 1, 1, 1, 0],
+    },
+  },
+  {
+    id: 23,
+    title: 'Onda XOR',
+    description: 'Análise de tempo avançada',
+    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta XOR.',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'waveform',
+    waveform: {
+      gate: 'XOR',
+      timeSteps: 8,
+      inputA: [0, 1, 1, 0, 1, 0, 0, 1],
+      inputB: [0, 0, 1, 1, 1, 0, 1, 1],
+      expectedOutput: [0, 1, 0, 1, 0, 0, 1, 0],
+    },
+  },
+  // === NEW: Bit weight challenges ===
+  {
+    id: 24,
+    title: 'Binário: 3 bits',
+    description: 'Conversão rápida',
+    objective: 'Represente o número decimal 5 usando 3 chaves (bits).',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'bit_weight',
+    bitWeight: { targetDecimal: 5, numBits: 3 },
+  },
+  {
+    id: 25,
+    title: 'Binário: 4 bits',
+    description: 'Conversão rápida',
+    objective: 'Represente o número decimal 11 usando 4 chaves (bits).',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'bit_weight',
+    bitWeight: { targetDecimal: 11, numBits: 4 },
+  },
+  {
+    id: 26,
+    title: 'Binário: 5 bits',
+    description: 'Conversão avançada',
+    objective: 'Represente o número decimal 23 usando 5 chaves (bits).',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'bit_weight',
+    bitWeight: { targetDecimal: 23, numBits: 5 },
+  },
+  // === Levels with formula quiz gates ===
+  {
+    id: 27,
+    title: 'Quiz + Tabela NAND',
+    description: 'Fórmula 2^n + Tabela',
+    objective: 'Responda quantas combinações existem para 2 entradas, depois preencha a Tabela NAND.',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'fill_table',
+    formulaQuiz: { numInputs: 2 },
+    truthTable: {
+      inputLabels: ['A', 'B'],
+      outputLabels: ['NAND'],
+      rows: [
+        { inputs: [0, 0], outputs: [1] },
+        { inputs: [0, 1], outputs: [1] },
+        { inputs: [1, 0], outputs: [1] },
+        { inputs: [1, 1], outputs: [0] },
+      ],
+      hiddenOutputIndices: [0, 1, 2, 3],
+    },
+  },
+  {
+    id: 28,
+    title: 'Quiz + Tabela 3 Entradas',
+    description: 'Fórmula 2^n + Tabela',
+    objective: 'Responda quantas combinações existem para 3 entradas, depois preencha a Tabela.',
+    availableComponents: [],
+    testCases: [],
+    maxScore: 100,
+    challengeType: 'fill_table',
+    formulaQuiz: { numInputs: 3 },
+    truthTable: {
+      inputLabels: ['A', 'B', 'C'],
+      outputLabels: ['(A∨B)∧C'],
+      rows: [
+        { inputs: [0, 0, 0], outputs: [0] },
+        { inputs: [0, 0, 1], outputs: [0] },
+        { inputs: [0, 1, 0], outputs: [0] },
+        { inputs: [0, 1, 1], outputs: [1] },
+        { inputs: [1, 0, 0], outputs: [0] },
+        { inputs: [1, 0, 1], outputs: [1] },
+        { inputs: [1, 1, 0], outputs: [0] },
+        { inputs: [1, 1, 1], outputs: [1] },
       ],
       hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
     },

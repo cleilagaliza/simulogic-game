@@ -80,6 +80,12 @@ export function propagateSignals(
           node.data = { ...node.data, inputs: inputVals, output };
           changed = true;
         }
+      } else if (node.data.type === 'probe') {
+        const inputVal = getInputValue(incoming, nodeMap);
+        if (node.data.value !== inputVal) {
+          node.data = { ...node.data, value: inputVal };
+          changed = true;
+        }
       }
     }
   }
@@ -103,6 +109,8 @@ function getOutputValue(node: Node<CircuitNodeData>): LogicValue {
     case 'xnor':
       return node.data.output;
     case 'led':
+      return node.data.value;
+    case 'probe':
       return node.data.value;
     default:
       return 0;

@@ -177,6 +177,7 @@ const gates: GateEntry[] = [
 const Encyclopedia = () => {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showBinary, setShowBinary] = useState(false);
 
   const toggle = (id: string) => setExpandedId(prev => (prev === id ? null : id));
 
@@ -195,6 +196,90 @@ const Encyclopedia = () => {
           Revisão teórica das portas lógicas fundamentais. Clique em um componente para ver seu símbolo ANSI, regra lógica e tabela verdade.
         </p>
 
+        {/* Binary Systems section */}
+        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 overflow-hidden mb-4">
+          <button
+            onClick={() => setShowBinary(prev => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-primary/10 transition-colors"
+          >
+            <span className="font-bold text-sm text-primary">📐 Sistemas Binários</span>
+            <ChevronDown
+              size={16}
+              className={`text-primary transition-transform ${showBinary ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showBinary && (
+            <div className="px-4 pb-4 space-y-4 border-t border-primary/20 pt-3">
+              {/* Bit */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-1">O que é um Bit?</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Um <strong className="text-foreground">bit</strong> (binary digit) é a menor unidade de informação em sistemas digitais.
+                  Ele pode assumir apenas dois valores: <code className="text-primary font-bold">0</code> (desligado/falso)
+                  ou <code className="text-primary font-bold">1</code> (ligado/verdadeiro). Toda a computação digital é construída sobre esta base.
+                </p>
+              </div>
+
+              {/* Byte */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-1">O que é um Byte?</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Um <strong className="text-foreground">byte</strong> é um grupo de <strong>8 bits</strong>.
+                  Com 8 bits, é possível representar <code className="text-primary font-bold">2⁸ = 256</code> valores diferentes (de 0 a 255).
+                  O byte é a unidade fundamental de armazenamento em computadores.
+                </p>
+              </div>
+
+              {/* MSB / LSB */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-1">MSB e LSB</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-2">
+                  A posição de cada bit determina seu <strong className="text-foreground">peso</strong> (valor). Num número binário, os bits são ordenados:
+                </p>
+                <div className="flex items-center justify-center gap-1 p-3 bg-muted rounded-lg">
+                  {[
+                    { label: 'MSB', weight: '2³=8', value: '1' },
+                    { label: '', weight: '2²=4', value: '0' },
+                    { label: '', weight: '2¹=2', value: '1' },
+                    { label: 'LSB', weight: '2⁰=1', value: '1' },
+                  ].map((bit, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <span className="text-[9px] text-primary font-bold">{bit.label}</span>
+                      <div className="w-10 h-10 rounded border-2 border-border bg-background flex items-center justify-center text-lg font-bold font-mono text-foreground">
+                        {bit.value}
+                      </div>
+                      <span className="text-[9px] text-muted-foreground font-mono">{bit.weight}</span>
+                    </div>
+                  ))}
+                  <div className="flex flex-col items-center gap-1 ml-3">
+                    <span className="text-[9px] text-muted-foreground">&nbsp;</span>
+                    <span className="text-sm font-bold text-foreground">= 11</span>
+                    <span className="text-[9px] text-muted-foreground font-mono">(decimal)</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                  <strong className="text-foreground">MSB</strong> (Most Significant Bit) — bit mais à esquerda, com maior peso.
+                  <br />
+                  <strong className="text-foreground">LSB</strong> (Least Significant Bit) — bit mais à direita, com menor peso (vale 1).
+                  <br />
+                  A ordem dos bits afeta diretamente o resultado: trocar MSB e LSB gera um número completamente diferente.
+                </p>
+              </div>
+
+              {/* 2^n formula */}
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-1">Fórmula: 2ⁿ combinações</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Com <strong className="text-foreground">n</strong> bits, existem <code className="text-primary font-bold">2ⁿ</code> combinações possíveis.
+                  Exemplo: 3 bits → 2³ = 8 combinações (000 a 111). Essa fórmula é a base para entender tabelas verdade.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Gates list */}
         {gates.map(gate => {
           const isOpen = expandedId === gate.id;
           return (
@@ -202,7 +287,6 @@ const Encyclopedia = () => {
               key={gate.id}
               className="rounded-lg border border-border bg-card overflow-hidden transition-shadow hover:shadow-sm"
             >
-              {/* Header row */}
               <button
                 onClick={() => toggle(gate.id)}
                 className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-accent/50 transition-colors"
@@ -214,10 +298,8 @@ const Encyclopedia = () => {
                 />
               </button>
 
-              {/* Expanded content */}
               {isOpen && (
                 <div className="px-4 pb-4 space-y-4 border-t border-border pt-3">
-                  {/* Symbol */}
                   <div className="flex items-center gap-4">
                     <div className="bg-muted rounded-md p-3 flex items-center justify-center">
                       {gate.symbol()}
@@ -228,7 +310,6 @@ const Encyclopedia = () => {
                     </div>
                   </div>
 
-                  {/* Truth Table */}
                   <div>
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                       Tabela Verdade
