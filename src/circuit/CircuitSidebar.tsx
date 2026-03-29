@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { ToggleLeft, Circle, Lightbulb, Ban, GitMerge, GitFork, Zap, ShieldOff, ShieldClose, Shuffle, ShieldX } from 'lucide-react';
+import { ToggleLeft, Circle, Lightbulb, Ban, GitMerge, GitFork, Zap, ShieldOff, ShieldClose, Shuffle, ShieldX, Search } from 'lucide-react';
 
 interface DraggableItemProps {
   type: string;
@@ -35,6 +35,10 @@ const allOutputs = [
   { type: 'led', label: 'LED', icon: <Lightbulb size={16} /> },
 ];
 
+const allTools = [
+  { type: 'probe', label: 'Sonda Lógica', icon: <Search size={16} /> },
+];
+
 const allGates = [
   { type: 'not', label: 'NOT', icon: <Ban size={16} /> },
   { type: 'and', label: 'AND', icon: <GitMerge size={16} /> },
@@ -56,6 +60,8 @@ const CircuitSidebar = memo(({ availableComponents }: CircuitSidebarProps) => {
   const inputs = filter(allInputs);
   const outputs = filter(allOutputs);
   const gates = filter(allGates);
+  // Probe is always available when sidebar is shown
+  const tools = allTools;
 
   return (
     <div className="w-56 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col h-full overflow-y-auto">
@@ -95,6 +101,17 @@ const CircuitSidebar = memo(({ availableComponents }: CircuitSidebarProps) => {
               Portas Lógicas
             </div>
             {gates.map(item => (
+              <DraggableItem key={item.type} {...item} />
+            ))}
+          </>
+        )}
+
+        {tools.length > 0 && (
+          <>
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
+              Ferramentas
+            </div>
+            {tools.map(item => (
               <DraggableItem key={item.type} {...item} />
             ))}
           </>

@@ -29,7 +29,12 @@ export interface GateData {
   output: LogicValue;
 }
 
-export type CircuitNodeData = ToggleSwitchData | PushButtonData | VoltageSourceData | LedData | GateData;
+export interface ProbeData {
+  type: 'probe';
+  value: LogicValue;
+}
+
+export type CircuitNodeData = ToggleSwitchData | PushButtonData | VoltageSourceData | LedData | GateData | ProbeData;
 
 export const LED_COLORS: Record<LedColor, string> = {
   red: 'hsl(0, 85%, 55%)',
