@@ -6,7 +6,7 @@ export interface WaveformChallengeData {
   gate: string;
   timeSteps: number;
   inputA: LogicValue[];
-  inputB: LogicValue[];
+  inputB?: LogicValue[];
   expectedOutput: LogicValue[];
 }
 
@@ -75,15 +75,16 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
   const sectionH = ROW_H;
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-card border border-border rounded-lg max-w-xl">
+    <div className="flex flex-col gap-3 p-4 bg-card border border-border rounded-lg max-w-xl w-full overflow-hidden">
       <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">
         Análise de Tempo — Porta {gate.toUpperCase()}
       </h3>
       <p className="text-[11px] text-muted-foreground">
-        Observe as formas de onda de A e B. Clique nos intervalos abaixo para desenhar a saída S.
+        Observe {inputB ? 'as formas de onda de A e B' : 'a forma de onda de A'}. Clique nos intervalos abaixo para desenhar a saída S.
       </p>
 
       {/* Time ruler */}
+      <div className="overflow-x-auto">
       <svg width={totalW} height={16} className="overflow-visible">
         {Array.from({ length: timeSteps }, (_, i) => (
           <text
@@ -105,9 +106,11 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
       </svg>
 
       {/* Input B */}
-      <svg width={totalW} height={sectionH} className="overflow-visible">
-        <WaveformLine values={inputB} color="hsl(280, 70%, 55%)" label="B" />
-      </svg>
+      {inputB && (
+        <svg width={totalW} height={sectionH} className="overflow-visible">
+          <WaveformLine values={inputB} color="hsl(280, 70%, 55%)" label="B" />
+        </svg>
+      )}
 
       {/* Divider */}
       <div className="border-t border-dashed border-border" />
@@ -130,6 +133,7 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
           />
         ))}
       </svg>
+      </div>
 
       <p className="text-[9px] text-muted-foreground">
         Clique em cada intervalo de tempo para definir se a saída é 0 (baixo) ou 1 (alto).

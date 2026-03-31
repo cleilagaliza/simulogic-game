@@ -1,18 +1,20 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import CircuitCanvas, { type CircuitCanvasRef } from '@/circuit/CircuitCanvas';
 import CircuitSidebar from '@/circuit/CircuitSidebar';
-import { levels } from '@/game/levels';
+import { levels, type LevelPhase } from '@/game/levels';
 import { verifyCircuit, type VerifyResult } from '@/game/verifyCircuit';
 import TruthTableGrid, { type TruthTableGridRef } from '@/game/TruthTableGrid';
 import WaveformChallenge, { type WaveformChallengeRef } from '@/game/WaveformChallenge';
 import BitWeightChallenge, { type BitWeightChallengeRef } from '@/game/BitWeightChallenge';
 import FormulaQuiz from '@/game/FormulaQuiz';
-import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight, Trophy } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight, Trophy, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Dialog,
   DialogContent,
@@ -21,30 +23,34 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 const Game = () => {
   const { levelId } = useParams<{ levelId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const canvasRef = useRef<CircuitCanvasRef>(null);
   const tableRef = useRef<TruthTableGridRef>(null);
   const waveformRef = useRef<WaveformChallengeRef>(null);
   const bitWeightRef = useRef<BitWeightChallengeRef>(null);
+
+  const [currentPhaseIdx, setCurrentPhaseIdx] = useState(0);
+  const [phaseResults, setPhaseResults] = useState<Record<number, boolean>>({});
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [isTraining, setIsTraining] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [tableError, setTableError] = useState(false);
-  const [quizPassed, setQuizPassed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const level = levels.find(l => l.id === Number(levelId));
 
   useEffect(() => {
     setResult(null);
-    setTableError(false);
     setShowModal(false);
     setIsTraining(false);
-    setQuizPassed(false);
+    setCurrentPhaseIdx(0);
+    setPhaseResults({});
   }, [levelId]);
 
   useEffect(() => {
@@ -68,14 +74,10 @@ const Game = () => {
     );
   }
 
-  // Show formula quiz gate before starting
-  const needsQuiz = !!level.formulaQuiz && !quizPassed;
-
-  const isFillOnly = level.challengeType === 'fill_table';
-  const isWaveform = level.challengeType === 'waveform';
-  const isBitWeight = level.challengeType === 'bit_weight';
-  const hasTable = level.challengeType === 'fill_table' || level.challengeType === 'interpret_table';
-  const hasCircuit = level.challengeType === 'circuit' || level.challengeType === 'interpret_table';
+  const phases = level.phases;
+  const currentPhase = phases[currentPhaseIdx];
+  const isLastPhase = currentPhaseIdx === phases.length - 1;
+  const allPhasesComplete = phases.every((_, i) => phaseResults[i]);
 
   const saveScore = async (res: VerifyResult) => {
     if (!user) return;
@@ -92,12 +94,10 @@ const Game = () => {
         },
         { onConflict: 'user_id,level_number' }
       );
-
       const { data: allProg } = await (supabase as any)
         .from('user_progress')
         .select('score')
         .eq('user_id', user.id);
-
       const totalScore = (allProg || []).reduce((sum: number, p: any) => sum + p.score, 0);
       await (supabase as any).from('profiles').update({ total_score: totalScore }).eq('user_id', user.id);
     } catch {
@@ -106,87 +106,77 @@ const Game = () => {
     setSaving(false);
   };
 
-  const handleVerify = async () => {
-    let circuitOk = true;
-    let tableOk = true;
-    let circuitResult: VerifyResult | null = null;
+  const handleVerifyPhase = async () => {
+    let ok = false;
 
-    // Verify circuit if needed
-    if (hasCircuit && canvasRef.current) {
+    if (currentPhase.type === 'circuit' && canvasRef.current) {
       const { nodes, edges } = canvasRef.current.getState();
-      circuitResult = verifyCircuit(nodes, edges, level.testCases);
-      circuitOk = circuitResult.success;
-    }
-
-    // Verify truth table if needed
-    if (hasTable && tableRef.current) {
-      tableOk = tableRef.current.verify();
-    }
-
-    // Verify waveform
-    if (isWaveform && waveformRef.current) {
-      const ok = waveformRef.current.verify();
-      const finalResult: VerifyResult = ok
-        ? { passed: 1, total: 1, score: 100, stars: 3, success: true }
-        : { passed: 0, total: 1, score: 0, stars: 0, success: false };
-      setResult(finalResult);
-      if (!isTraining) await saveScore(finalResult);
-      if (finalResult.success) setShowModal(true);
-      return;
-    }
-
-    // Verify bit weight
-    if (isBitWeight && bitWeightRef.current) {
-      const ok = bitWeightRef.current.verify();
-      const finalResult: VerifyResult = ok
-        ? { passed: 1, total: 1, score: 100, stars: 3, success: true }
-        : { passed: 0, total: 1, score: 0, stars: 0, success: false };
-      setResult(finalResult);
-      if (!isTraining) await saveScore(finalResult);
-      if (finalResult.success) setShowModal(true);
-      return;
-    }
-
-    setTableError(!tableOk);
-
-    // Build final result
-    let finalResult: VerifyResult;
-    if (isFillOnly) {
-      finalResult = tableOk
-        ? { passed: 1, total: 1, score: 100, stars: 3, success: true }
-        : { passed: 0, total: 1, score: 0, stars: 0, success: false };
-    } else if (level.challengeType === 'interpret_table') {
-      const bothOk = circuitOk && tableOk;
-      if (circuitResult) {
-        finalResult = {
-          ...circuitResult,
-          success: bothOk,
-          score: bothOk ? circuitResult.score : Math.min(circuitResult.score, 50),
-          stars: bothOk ? circuitResult.stars : 0,
-        };
-      } else {
-        finalResult = { passed: 0, total: 1, score: 0, stars: 0, success: false };
+      const res = verifyCircuit(nodes, edges, currentPhase.testCases || []);
+      ok = res.success;
+      if (!ok) {
+        setResult(res);
+        return;
       }
-    } else {
-      finalResult = circuitResult || { passed: 0, total: 1, score: 0, stars: 0, success: false };
     }
 
-    setResult(finalResult);
-
-    if (!isTraining) {
-      await saveScore(finalResult);
+    if (currentPhase.type === 'fill_table' && tableRef.current) {
+      ok = tableRef.current.verify();
+      if (!ok) {
+        toast.error('Tabela Verdade incorreta. Tente novamente!');
+        return;
+      }
     }
 
-    if (finalResult.success) {
+    if (currentPhase.type === 'waveform' && waveformRef.current) {
+      ok = waveformRef.current.verify();
+      if (!ok) {
+        toast.error('Forma de onda incorreta. Tente novamente!');
+        return;
+      }
+    }
+
+    if (currentPhase.type === 'bit_weight' && bitWeightRef.current) {
+      ok = bitWeightRef.current.verify();
+      if (!ok) {
+        toast.error('Conversão incorreta. Tente novamente!');
+        return;
+      }
+    }
+
+    if (currentPhase.type === 'formula_quiz') {
+      // Quiz handles its own validation via onCorrect callback
+      return;
+    }
+
+    // Phase passed
+    ok = true;
+    const newResults = { ...phaseResults, [currentPhaseIdx]: true };
+    setPhaseResults(newResults);
+    setResult(null);
+
+    if (isLastPhase) {
+      // All phases complete
+      const finalResult: VerifyResult = { passed: 1, total: 1, score: 100, stars: 3, success: true };
+      setResult(finalResult);
+      if (!isTraining) await saveScore(finalResult);
       setShowModal(true);
+    } else {
+      toast.success(`${currentPhase.label} concluído! Avançando...`);
+      setCurrentPhaseIdx(prev => prev + 1);
     }
+  };
+
+  const handleQuizCorrect = () => {
+    const newResults = { ...phaseResults, [currentPhaseIdx]: true };
+    setPhaseResults(newResults);
+    toast.success('Quiz correto! Avançando...');
+    setCurrentPhaseIdx(prev => prev + 1);
   };
 
   const handleNext = () => {
     const nextLevel = level.id + 1;
     setShowModal(false);
     setResult(null);
-    setTableError(false);
     if (nextLevel < levels.length) {
       navigate(`/game/${nextLevel}`);
     } else {
@@ -195,170 +185,140 @@ const Game = () => {
     }
   };
 
-  const canAdvance = result && result.success;
-
-  // Show formula quiz gate
-  if (needsQuiz) {
+  // Current phase is a quiz — render quiz screen
+  if (currentPhase.type === 'formula_quiz' && currentPhase.formulaQuiz) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/levels')} title="Voltar ao Menu">
-            <ArrowLeft size={16} />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold text-primary">Nível {level.id}</span>
-            <span className="text-xs text-foreground font-medium ml-2">{level.title}</span>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-6">
+        <TopBar level={level} isTraining={isTraining} navigate={navigate} currentPhaseIdx={currentPhaseIdx} phases={phases} />
+        <div className="flex-1 flex items-center justify-center p-4">
           <FormulaQuiz
-            numInputs={level.formulaQuiz!.numInputs}
-            onCorrect={() => setQuizPassed(true)}
+            numInputs={currentPhase.formulaQuiz.numInputs}
+            onCorrect={handleQuizCorrect}
           />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {hasCircuit && <CircuitSidebar availableComponents={level.availableComponents} />}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/levels')} title="Voltar ao Menu">
-            <ArrowLeft size={16} />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-primary">Nível {level.id}</span>
-              <span className="text-xs text-foreground font-medium">{level.title}</span>
-              {isTraining && (
-                <span className="text-[9px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                  TREINO
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground truncate">{level.objective}</p>
-          </div>
-          <Button size="sm" onClick={handleVerify}>
-            <CheckCircle2 size={14} /> Verificar
-          </Button>
-        </div>
+  const hasCircuit = currentPhase.type === 'circuit';
+  const hasFillTable = currentPhase.type === 'fill_table';
+  const hasWaveform = currentPhase.type === 'waveform';
+  const hasBitWeight = currentPhase.type === 'bit_weight';
 
-        {/* Inline result feedback (non-success) */}
-        {result && !result.success && (
-          <div className="px-4 py-3 border-b border-border bg-card flex items-center gap-3 flex-wrap">
-            <XCircle size={20} className="text-destructive" />
-            <span className="text-sm font-medium text-foreground">Tente novamente</span>
-            {!isFillOnly && !isWaveform && !isBitWeight && (
-              <span className="text-xs text-muted-foreground">
-                {result.passed}/{result.total} testes • {result.score} pts
-              </span>
-            )}
-            {tableError && hasTable && (
-              <span className="text-xs text-destructive">Tabela Verdade incorreta</span>
-            )}
-            <div className="flex gap-0.5">
-              {[1, 2, 3].map(s => (
-                <Star
-                  key={s}
-                  size={14}
-                  className={s <= (result?.stars ?? 0) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}
-                />
-              ))}
+  const sidebarContent = hasCircuit ? (
+    <CircuitSidebar availableComponents={currentPhase.availableComponents} />
+  ) : null;
+
+  return (
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-background">
+      {/* Top bar */}
+      <TopBar level={level} isTraining={isTraining} navigate={navigate} currentPhaseIdx={currentPhaseIdx} phases={phases}>
+        {hasCircuit && isMobile && (
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0">
+                <Menu size={16} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        )}
+        <Button size="sm" onClick={handleVerifyPhase} className="shrink-0">
+          <CheckCircle2 size={14} /> Verificar
+        </Button>
+      </TopBar>
+
+      {/* Error feedback */}
+      {result && !result.success && (
+        <div className="px-3 py-2 border-b border-border bg-card flex items-center gap-2 flex-wrap">
+          <XCircle size={16} className="text-destructive" />
+          <span className="text-xs font-medium text-foreground">Tente novamente</span>
+          <span className="text-[10px] text-muted-foreground">
+            {result.passed}/{result.total} testes • {result.score} pts
+          </span>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Desktop sidebar */}
+        {hasCircuit && !isMobile && sidebarContent}
+
+        {/* Circuit canvas */}
+        {hasCircuit && (
+          <div className="flex-1 min-w-0 min-h-0">
+            <CircuitCanvas ref={canvasRef} />
+          </div>
+        )}
+
+        {/* Fill table */}
+        {hasFillTable && currentPhase.truthTable && (
+          <div className="flex-1 flex items-center justify-center p-3 overflow-auto">
+            <div className="w-full max-w-lg">
+              <TruthTableGrid
+                key={`${levelId}-${currentPhaseIdx}`}
+                ref={tableRef}
+                challenge={currentPhase.truthTable}
+                mode="fill_table"
+                disabled={false}
+              />
             </div>
           </div>
         )}
 
-        {/* Main content area */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Waveform challenge */}
-          {isWaveform && level.waveform && (
-            <div className="flex-1 flex items-center justify-center p-6">
-              <WaveformChallenge
-                key={levelId}
-                ref={waveformRef}
-                challenge={level.waveform}
-                disabled={!!(result && result.success)}
-              />
-            </div>
-          )}
+        {/* Waveform */}
+        {hasWaveform && currentPhase.waveform && (
+          <div className="flex-1 flex items-center justify-center p-3 overflow-auto">
+            <WaveformChallenge
+              key={`${levelId}-${currentPhaseIdx}`}
+              ref={waveformRef}
+              challenge={currentPhase.waveform}
+              disabled={false}
+            />
+          </div>
+        )}
 
-          {/* Bit weight challenge */}
-          {isBitWeight && level.bitWeight && (
-            <div className="flex-1 flex items-center justify-center p-6">
-              <BitWeightChallenge
-                key={levelId}
-                ref={bitWeightRef}
-                challenge={level.bitWeight}
-                disabled={!!(result && result.success)}
-              />
-            </div>
-          )}
-
-          {/* Circuit canvas */}
-          {hasCircuit && (
-            <div className={hasTable ? 'flex-1 min-w-0' : 'flex-1'}>
-              <CircuitCanvas ref={canvasRef} />
-            </div>
-          )}
-
-          {/* Truth table */}
-          {hasTable && level.truthTable && (
-            <div className={hasCircuit ? 'w-72 border-l border-border overflow-auto p-2' : 'flex-1 flex items-center justify-center p-6'}>
-              <div className={hasCircuit ? '' : 'w-full max-w-lg'}>
-                <TruthTableGrid
-                  key={levelId}
-                  ref={tableRef}
-                  challenge={level.truthTable}
-                  mode={level.challengeType as 'fill_table' | 'interpret_table'}
-                  disabled={!!(result && result.success)}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Bit weight */}
+        {hasBitWeight && currentPhase.bitWeight && (
+          <div className="flex-1 flex items-center justify-center p-3 overflow-auto">
+            <BitWeightChallenge
+              key={`${levelId}-${currentPhaseIdx}`}
+              ref={bitWeightRef}
+              challenge={currentPhase.bitWeight}
+              disabled={false}
+            />
+          </div>
+        )}
       </div>
 
       {/* Success Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="items-center text-center">
-            <Trophy className="h-12 w-12 text-primary mb-2" />
-            <DialogTitle className="text-xl">Nível Concluído!</DialogTitle>
+            <Trophy className="h-10 w-10 text-primary mb-2" />
+            <DialogTitle className="text-lg">Nível Concluído!</DialogTitle>
             <DialogDescription>
               {isTraining ? 'Modo Treino — pontuação não salva.' : 'Pontuação salva automaticamente.'}
             </DialogDescription>
           </DialogHeader>
-
           {result && (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <span className="text-3xl font-bold text-foreground">{result.score} pts</span>
+            <div className="flex flex-col items-center gap-2 py-3">
+              <span className="text-2xl font-bold text-foreground">{result.score} pts</span>
               <div className="flex gap-1">
                 {[1, 2, 3].map(s => (
-                  <Star
-                    key={s}
-                    size={24}
-                    className={s <= result.stars ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}
-                  />
+                  <Star key={s} size={20} className={s <= result.stars ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'} />
                 ))}
               </div>
-              <span className="text-xs text-muted-foreground">
-                {isFillOnly ? 'Tabela Verdade completa!' :
-                 isWaveform ? 'Forma de onda correta!' :
-                 isBitWeight ? 'Conversão correta!' :
-                 `${result.passed}/${result.total} testes aprovados`}
-              </span>
             </div>
           )}
-
           <DialogFooter className="flex-row gap-2 sm:justify-center">
-            <Button variant="outline" onClick={() => { setShowModal(false); navigate('/levels'); }}>
-              Voltar ao Menu
+            <Button variant="outline" size="sm" onClick={() => { setShowModal(false); navigate('/levels'); }}>
+              Voltar
             </Button>
-            <Button onClick={handleNext} disabled={!canAdvance}>
-              Próximo Nível <ArrowRight size={14} />
+            <Button size="sm" onClick={handleNext}>
+              Próximo <ArrowRight size={14} />
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -366,5 +326,60 @@ const Game = () => {
     </div>
   );
 };
+
+// Top bar component
+function TopBar({
+  level,
+  isTraining,
+  navigate,
+  currentPhaseIdx,
+  phases,
+  children,
+}: {
+  level: { id: number; title: string; objective: string };
+  isTraining: boolean;
+  navigate: (path: string) => void;
+  currentPhaseIdx: number;
+  phases: LevelPhase[];
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-card shrink-0">
+      <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => navigate('/levels')}>
+        <ArrowLeft size={14} />
+      </Button>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-semibold text-primary">Nv.{level.id}</span>
+          <span className="text-[10px] text-foreground font-medium truncate">{level.title}</span>
+          {isTraining && (
+            <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1 py-0.5 rounded">TREINO</span>
+          )}
+        </div>
+        {/* Phase indicators */}
+        {phases.length > 1 && (
+          <div className="flex items-center gap-1 mt-0.5">
+            {phases.map((p, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'text-[8px] px-1.5 py-0.5 rounded-full font-medium',
+                  i === currentPhaseIdx
+                    ? 'bg-primary text-primary-foreground'
+                    : i < currentPhaseIdx
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                {p.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default Game;

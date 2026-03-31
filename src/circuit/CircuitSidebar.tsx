@@ -17,7 +17,7 @@ const DraggableItem = ({ type, label, icon }: DraggableItemProps) => {
     <div
       draggable
       onDragStart={onDragStart}
-      className="flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-grab active:cursor-grabbing transition-colors hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border"
+      className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border"
     >
       <span className="text-sidebar-primary">{icon}</span>
       <span className="text-xs font-medium text-sidebar-foreground">{label}</span>
@@ -60,68 +60,33 @@ const CircuitSidebar = memo(({ availableComponents }: CircuitSidebarProps) => {
   const inputs = filter(allInputs);
   const outputs = filter(allOutputs);
   const gates = filter(allGates);
-  // Probe is always available when sidebar is shown
   const tools = allTools;
 
+  const Section = ({ title, items }: { title: string; items: typeof allInputs }) =>
+    items.length > 0 ? (
+      <>
+        <div className="text-[9px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-2 py-1 mt-1">
+          {title}
+        </div>
+        {items.map(item => (
+          <DraggableItem key={item.type} {...item} />
+        ))}
+      </>
+    ) : null;
+
   return (
-    <div className="w-56 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col h-full overflow-y-auto">
-      <div className="p-4 border-b border-sidebar-border">
-        <h1 className="text-sm font-bold tracking-tight" style={{ color: 'hsl(var(--sidebar-primary))' }}>
-          ⚡ Logic Simulator
+    <div className="w-52 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col h-full overflow-y-auto shrink-0">
+      <div className="p-3 border-b border-sidebar-border">
+        <h1 className="text-xs font-bold tracking-tight" style={{ color: 'hsl(var(--sidebar-primary))' }}>
+          ⚡ Componentes
         </h1>
-        <p className="text-[10px] text-sidebar-foreground/60 mt-0.5">Arraste os componentes</p>
+        <p className="text-[9px] text-sidebar-foreground/60 mt-0.5">Arraste para o canvas</p>
       </div>
-
-      <div className="p-3 flex flex-col gap-1">
-        {inputs.length > 0 && (
-          <>
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
-              Entradas
-            </div>
-            {inputs.map(item => (
-              <DraggableItem key={item.type} {...item} />
-            ))}
-          </>
-        )}
-
-        {outputs.length > 0 && (
-          <>
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
-              Saídas
-            </div>
-            {outputs.map(item => (
-              <DraggableItem key={item.type} {...item} />
-            ))}
-          </>
-        )}
-
-        {gates.length > 0 && (
-          <>
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
-              Portas Lógicas
-            </div>
-            {gates.map(item => (
-              <DraggableItem key={item.type} {...item} />
-            ))}
-          </>
-        )}
-
-        {tools.length > 0 && (
-          <>
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1 mt-2">
-              Ferramentas
-            </div>
-            {tools.map(item => (
-              <DraggableItem key={item.type} {...item} />
-            ))}
-          </>
-        )}
-      </div>
-
-      <div className="mt-auto p-3 border-t border-sidebar-border">
-        <p className="text-[9px] text-sidebar-foreground/40 leading-relaxed">
-          Conecte componentes arrastando entre os handles. Sinais propagam em tempo real.
-        </p>
+      <div className="p-2 flex flex-col gap-0.5 flex-1">
+        <Section title="Entradas" items={inputs} />
+        <Section title="Saídas" items={outputs} />
+        <Section title="Portas Lógicas" items={gates} />
+        <Section title="Ferramentas" items={tools} />
       </div>
     </div>
   );
