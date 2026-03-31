@@ -133,6 +133,7 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
           />
         ))}
       </svg>
+      </div>
 
       <p className="text-[9px] text-muted-foreground">
         Clique em cada intervalo de tempo para definir se a saída é 0 (baixo) ou 1 (alto).
