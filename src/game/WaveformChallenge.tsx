@@ -6,7 +6,7 @@ export interface WaveformChallengeData {
   gate: string;
   timeSteps: number;
   inputA: LogicValue[];
-  inputB: LogicValue[];
+  inputB?: LogicValue[];
   expectedOutput: LogicValue[];
 }
 
