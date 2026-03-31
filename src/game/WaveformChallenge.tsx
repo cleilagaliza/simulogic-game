@@ -75,7 +75,7 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
   const sectionH = ROW_H;
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-card border border-border rounded-lg max-w-xl">
+    <div className="flex flex-col gap-3 p-4 bg-card border border-border rounded-lg max-w-xl w-full overflow-hidden">
       <h3 className="text-xs font-semibold text-primary uppercase tracking-wide">
         Análise de Tempo — Porta {gate.toUpperCase()}
       </h3>
