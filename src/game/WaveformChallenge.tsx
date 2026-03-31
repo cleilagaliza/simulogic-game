@@ -80,10 +80,11 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
         Análise de Tempo — Porta {gate.toUpperCase()}
       </h3>
       <p className="text-[11px] text-muted-foreground">
-        Observe as formas de onda de A e B. Clique nos intervalos abaixo para desenhar a saída S.
+        Observe {inputB ? 'as formas de onda de A e B' : 'a forma de onda de A'}. Clique nos intervalos abaixo para desenhar a saída S.
       </p>
 
       {/* Time ruler */}
+      <div className="overflow-x-auto">
       <svg width={totalW} height={16} className="overflow-visible">
         {Array.from({ length: timeSteps }, (_, i) => (
           <text
@@ -105,9 +106,11 @@ const WaveformChallenge = forwardRef<WaveformChallengeRef, Props>(({ challenge, 
       </svg>
 
       {/* Input B */}
-      <svg width={totalW} height={sectionH} className="overflow-visible">
-        <WaveformLine values={inputB} color="hsl(280, 70%, 55%)" label="B" />
-      </svg>
+      {inputB && (
+        <svg width={totalW} height={sectionH} className="overflow-visible">
+          <WaveformLine values={inputB} color="hsl(280, 70%, 55%)" label="B" />
+        </svg>
+      )}
 
       {/* Divider */}
       <div className="border-t border-dashed border-border" />
