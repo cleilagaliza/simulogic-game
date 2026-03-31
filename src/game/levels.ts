@@ -5,13 +5,10 @@ export interface TestCase {
   expectedOutputs: LogicValue[];
 }
 
-export type ChallengeType = 'circuit' | 'fill_table' | 'interpret_table' | 'waveform' | 'bit_weight';
-
 export interface TruthTableChallenge {
   inputLabels: string[];
   outputLabels: string[];
   rows: { inputs: LogicValue[]; outputs: LogicValue[] }[];
-  /** For 'fill_table': indices of output cells the user must fill (others shown) */
   hiddenOutputIndices?: number[];
 }
 
@@ -19,7 +16,7 @@ export interface WaveformChallengeData {
   gate: string;
   timeSteps: number;
   inputA: LogicValue[];
-  inputB: LogicValue[];
+  inputB?: LogicValue[];
   expectedOutput: LogicValue[];
 }
 
@@ -28,9 +25,22 @@ export interface BitWeightChallengeData {
   numBits: number;
 }
 
-/** Number of inputs for the 2^n formula quiz shown before the level */
 export interface FormulaQuizConfig {
   numInputs: number;
+}
+
+export type PhaseType = 'circuit' | 'fill_table' | 'waveform' | 'bit_weight' | 'formula_quiz';
+
+export interface LevelPhase {
+  type: PhaseType;
+  label: string;
+  /** Circuit phase: which components are available */
+  availableComponents?: string[];
+  testCases?: TestCase[];
+  truthTable?: TruthTableChallenge;
+  waveform?: WaveformChallengeData;
+  bitWeight?: BitWeightChallengeData;
+  formulaQuiz?: FormulaQuizConfig;
 }
 
 export interface LevelDefinition {
@@ -38,547 +48,591 @@ export interface LevelDefinition {
   title: string;
   description: string;
   objective: string;
-  availableComponents: string[];
-  testCases: TestCase[];
   maxScore: number;
-  challengeType: ChallengeType;
-  truthTable?: TruthTableChallenge;
-  waveform?: WaveformChallengeData;
-  bitWeight?: BitWeightChallengeData;
-  formulaQuiz?: FormulaQuizConfig;
+  phases: LevelPhase[];
 }
 
 export const levels: LevelDefinition[] = [
-  // === BEGINNER: Single gates, 1-2 inputs ===
+  // === Level 0: Hello World ===
   {
     id: 0,
     title: 'Olá, Mundo!',
     description: 'Sua primeira conexão',
     objective: 'Conecte uma Fonte (VCC) a um LED para fazê-lo acender.',
-    availableComponents: ['voltageSource', 'led'],
-    testCases: [],
     maxScore: 100,
-    challengeType: 'circuit',
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['voltageSource', 'led'],
+        testCases: [],
+      },
+    ],
   },
+  // === Level 1: Toggle Switch ===
   {
     id: 1,
     title: 'Interruptor',
     description: 'Controle com um switch',
-    objective: 'Conecte um Toggle Switch a um LED. O LED deve acender quando o switch estiver ligado.',
-    availableComponents: ['toggleSwitch', 'led'],
-    testCases: [
-      { inputs: [0], expectedOutputs: [0] },
-      { inputs: [1], expectedOutputs: [1] },
-    ],
+    objective: 'Conecte um Toggle Switch a um LED.',
     maxScore: 100,
-    challengeType: 'circuit',
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'led'],
+        testCases: [
+          { inputs: [0], expectedOutputs: [0] },
+          { inputs: [1], expectedOutputs: [1] },
+        ],
+      },
+    ],
   },
+  // === Level 2: NOT ===
   {
     id: 2,
-    title: 'Inversão',
-    description: 'Porta NOT',
-    objective: 'Use uma porta NOT para inverter o sinal. O LED deve acender quando o switch estiver desligado.',
-    availableComponents: ['toggleSwitch', 'not', 'led'],
-    testCases: [
-      { inputs: [0], expectedOutputs: [1] },
-      { inputs: [1], expectedOutputs: [0] },
-    ],
+    title: 'Porta NOT',
+    description: 'Inversão lógica',
+    objective: 'Aprenda a porta NOT: monte o circuito, preencha a tabela e analise a forma de onda.',
     maxScore: 100,
-    challengeType: 'circuit',
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'not', 'led'],
+        testCases: [
+          { inputs: [0], expectedOutputs: [1] },
+          { inputs: [1], expectedOutputs: [0] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A'],
+          outputLabels: ['NOT A'],
+          rows: [
+            { inputs: [0], outputs: [1] },
+            { inputs: [1], outputs: [0] },
+          ],
+          hiddenOutputIndices: [0, 1],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'NOT',
+          timeSteps: 8,
+          inputA: [0, 0, 1, 1, 0, 1, 0, 1],
+          expectedOutput: [1, 1, 0, 0, 1, 0, 1, 0],
+        },
+      },
+    ],
   },
+  // === Level 3: AND ===
   {
     id: 3,
-    title: 'Tabela NOT',
-    description: 'Preencha a tabela verdade',
-    objective: 'Um circuito NOT está montado. Preencha as saídas da Tabela Verdade.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A'],
-      outputLabels: ['NOT A'],
-      rows: [
-        { inputs: [0], outputs: [1] },
-        { inputs: [1], outputs: [0] },
-      ],
-      hiddenOutputIndices: [0, 1],
-    },
-  },
-  {
-    id: 4,
     title: 'Porta AND',
     description: 'Ambos ligados',
-    objective: 'O LED só deve acender quando AMBOS os switches estiverem ligados.',
-    availableComponents: ['toggleSwitch', 'and', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0] },
-      { inputs: [0, 1], expectedOutputs: [0] },
-      { inputs: [1, 0], expectedOutputs: [0] },
-      { inputs: [1, 1], expectedOutputs: [1] },
+    objective: 'Aprenda a porta AND: monte, preencha e analise.',
+    maxScore: 100,
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'and', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [0] },
+          { inputs: [0, 1], expectedOutputs: [0] },
+          { inputs: [1, 0], expectedOutputs: [0] },
+          { inputs: [1, 1], expectedOutputs: [1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['A AND B'],
+          rows: [
+            { inputs: [0, 0], outputs: [0] },
+            { inputs: [0, 1], outputs: [0] },
+            { inputs: [1, 0], outputs: [0] },
+            { inputs: [1, 1], outputs: [1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'AND',
+          timeSteps: 8,
+          inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+          inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+          expectedOutput: [0, 0, 0, 1, 0, 1, 0, 0],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'circuit',
   },
+  // === Level 4: OR ===
   {
-    id: 5,
-    title: 'Tabela AND',
-    description: 'Preencha a tabela verdade',
-    objective: 'Preencha todas as saídas da Tabela Verdade da porta AND.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['A AND B'],
-      rows: [
-        { inputs: [0, 0], outputs: [0] },
-        { inputs: [0, 1], outputs: [0] },
-        { inputs: [1, 0], outputs: [0] },
-        { inputs: [1, 1], outputs: [1] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3],
-    },
-  },
-  {
-    id: 6,
+    id: 4,
     title: 'Porta OR',
     description: 'Pelo menos um',
-    objective: 'O LED deve acender quando QUALQUER switch estiver ligado.',
-    availableComponents: ['toggleSwitch', 'or', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0] },
-      { inputs: [0, 1], expectedOutputs: [1] },
-      { inputs: [1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1], expectedOutputs: [1] },
-    ],
+    objective: 'Aprenda a porta OR: monte, preencha e analise.',
     maxScore: 100,
-    challengeType: 'circuit',
-  },
-  {
-    id: 7,
-    title: 'Interprete OR',
-    description: 'Monte o circuito',
-    objective: 'A Tabela Verdade mostra o comportamento de uma porta OR. Monte o circuito correspondente.',
-    availableComponents: ['toggleSwitch', 'or', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0] },
-      { inputs: [0, 1], expectedOutputs: [1] },
-      { inputs: [1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1], expectedOutputs: [1] },
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'or', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [0] },
+          { inputs: [0, 1], expectedOutputs: [1] },
+          { inputs: [1, 0], expectedOutputs: [1] },
+          { inputs: [1, 1], expectedOutputs: [1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['A OR B'],
+          rows: [
+            { inputs: [0, 0], outputs: [0] },
+            { inputs: [0, 1], outputs: [1] },
+            { inputs: [1, 0], outputs: [1] },
+            { inputs: [1, 1], outputs: [1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'OR',
+          timeSteps: 8,
+          inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+          inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+          expectedOutput: [0, 1, 1, 1, 1, 1, 1, 0],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'interpret_table',
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['Saída'],
-      rows: [
-        { inputs: [0, 0], outputs: [0] },
-        { inputs: [0, 1], outputs: [1] },
-        { inputs: [1, 0], outputs: [1] },
-        { inputs: [1, 1], outputs: [1] },
-      ],
-    },
   },
+  // === Level 5: NAND ===
   {
-    id: 8,
+    id: 5,
     title: 'Porta NAND',
     description: 'NOT AND',
-    objective: 'O LED deve apagar SOMENTE quando ambos os switches estiverem ligados.',
-    availableComponents: ['toggleSwitch', 'nand', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [1] },
-      { inputs: [0, 1], expectedOutputs: [1] },
-      { inputs: [1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1], expectedOutputs: [0] },
-    ],
+    objective: 'Aprenda a porta NAND: monte, preencha e analise.',
     maxScore: 100,
-    challengeType: 'circuit',
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'nand', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [1] },
+          { inputs: [0, 1], expectedOutputs: [1] },
+          { inputs: [1, 0], expectedOutputs: [1] },
+          { inputs: [1, 1], expectedOutputs: [0] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['NAND'],
+          rows: [
+            { inputs: [0, 0], outputs: [1] },
+            { inputs: [0, 1], outputs: [1] },
+            { inputs: [1, 0], outputs: [1] },
+            { inputs: [1, 1], outputs: [0] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'NAND',
+          timeSteps: 8,
+          inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+          inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+          expectedOutput: [1, 1, 1, 0, 1, 0, 1, 1],
+        },
+      },
+    ],
   },
+  // === Level 6: NOR ===
   {
-    id: 9,
+    id: 6,
     title: 'Porta NOR',
     description: 'NOT OR',
-    objective: 'O LED só deve acender quando NENHUM switch estiver ligado.',
-    availableComponents: ['toggleSwitch', 'nor', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [1] },
-      { inputs: [0, 1], expectedOutputs: [0] },
-      { inputs: [1, 0], expectedOutputs: [0] },
-      { inputs: [1, 1], expectedOutputs: [0] },
+    objective: 'Aprenda a porta NOR: monte, preencha e analise.',
+    maxScore: 100,
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'nor', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [1] },
+          { inputs: [0, 1], expectedOutputs: [0] },
+          { inputs: [1, 0], expectedOutputs: [0] },
+          { inputs: [1, 1], expectedOutputs: [0] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['NOR'],
+          rows: [
+            { inputs: [0, 0], outputs: [1] },
+            { inputs: [0, 1], outputs: [0] },
+            { inputs: [1, 0], outputs: [0] },
+            { inputs: [1, 1], outputs: [0] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'NOR',
+          timeSteps: 8,
+          inputA: [0, 0, 1, 1, 0, 1, 1, 0],
+          inputB: [0, 1, 0, 1, 1, 1, 0, 0],
+          expectedOutput: [1, 0, 0, 0, 0, 0, 0, 1],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'circuit',
   },
+  // === Level 7: XOR ===
   {
-    id: 10,
-    title: 'Tabela NAND & NOR',
-    description: 'Preencha ambas as saídas',
-    objective: 'Complete a Tabela Verdade com as saídas NAND e NOR para cada combinação de entradas.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['NAND', 'NOR'],
-      rows: [
-        { inputs: [0, 0], outputs: [1, 1] },
-        { inputs: [0, 1], outputs: [1, 0] },
-        { inputs: [1, 0], outputs: [1, 0] },
-        { inputs: [1, 1], outputs: [0, 0] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3],
-    },
-  },
-  {
-    id: 11,
+    id: 7,
     title: 'Porta XOR',
     description: 'Ou exclusivo',
-    objective: 'O LED deve acender quando os switches tiverem valores DIFERENTES.',
-    availableComponents: ['toggleSwitch', 'xor', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0] },
-      { inputs: [0, 1], expectedOutputs: [1] },
-      { inputs: [1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1], expectedOutputs: [0] },
-    ],
+    objective: 'Aprenda a porta XOR: monte, preencha e analise.',
     maxScore: 100,
-    challengeType: 'circuit',
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'xor', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [0] },
+          { inputs: [0, 1], expectedOutputs: [1] },
+          { inputs: [1, 0], expectedOutputs: [1] },
+          { inputs: [1, 1], expectedOutputs: [0] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['XOR'],
+          rows: [
+            { inputs: [0, 0], outputs: [0] },
+            { inputs: [0, 1], outputs: [1] },
+            { inputs: [1, 0], outputs: [1] },
+            { inputs: [1, 1], outputs: [0] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'XOR',
+          timeSteps: 8,
+          inputA: [0, 1, 1, 0, 1, 0, 0, 1],
+          inputB: [0, 0, 1, 1, 1, 0, 1, 1],
+          expectedOutput: [0, 1, 0, 1, 0, 0, 1, 0],
+        },
+      },
+    ],
   },
+  // === Level 8: XNOR ===
   {
-    id: 12,
+    id: 8,
     title: 'Porta XNOR',
     description: 'Igualdade',
-    objective: 'O LED deve acender quando os switches tiverem valores IGUAIS.',
-    availableComponents: ['toggleSwitch', 'xnor', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [1] },
-      { inputs: [0, 1], expectedOutputs: [0] },
-      { inputs: [1, 0], expectedOutputs: [0] },
-      { inputs: [1, 1], expectedOutputs: [1] },
-    ],
+    objective: 'Aprenda a porta XNOR: monte, preencha e analise.',
     maxScore: 100,
-    challengeType: 'circuit',
-  },
-  {
-    id: 13,
-    title: 'Interprete XOR',
-    description: 'Monte o circuito XOR',
-    objective: 'A Tabela Verdade abaixo descreve um XOR. Monte o circuito que a satisfaça.',
-    availableComponents: ['toggleSwitch', 'xor', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0] },
-      { inputs: [0, 1], expectedOutputs: [1] },
-      { inputs: [1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1], expectedOutputs: [0] },
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'xnor', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [1] },
+          { inputs: [0, 1], expectedOutputs: [0] },
+          { inputs: [1, 0], expectedOutputs: [0] },
+          { inputs: [1, 1], expectedOutputs: [1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['XNOR'],
+          rows: [
+            { inputs: [0, 0], outputs: [1] },
+            { inputs: [0, 1], outputs: [0] },
+            { inputs: [1, 0], outputs: [0] },
+            { inputs: [1, 1], outputs: [1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
+      {
+        type: 'waveform',
+        label: 'Forma de Onda',
+        waveform: {
+          gate: 'XNOR',
+          timeSteps: 8,
+          inputA: [0, 1, 1, 0, 1, 0, 0, 1],
+          inputB: [0, 0, 1, 1, 1, 0, 1, 1],
+          expectedOutput: [1, 0, 1, 0, 1, 1, 0, 1],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'interpret_table',
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['Saída'],
-      rows: [
-        { inputs: [0, 0], outputs: [0] },
-        { inputs: [0, 1], outputs: [1] },
-        { inputs: [1, 0], outputs: [1] },
-        { inputs: [1, 1], outputs: [0] },
-      ],
-    },
   },
-  // === INTERMEDIATE: 3 inputs, combinational ===
+  // === Level 9: Combinational (A AND B) OR C ===
   {
-    id: 14,
+    id: 9,
     title: 'Combinacional 1',
     description: '(A AND B) OR C',
-    objective: 'Construa: LED = (A AND B) OR C. Use 3 switches (A, B, C de cima para baixo).',
-    availableComponents: ['toggleSwitch', 'and', 'or', 'led'],
-    testCases: [
-      { inputs: [0, 0, 0], expectedOutputs: [0] },
-      { inputs: [0, 0, 1], expectedOutputs: [1] },
-      { inputs: [0, 1, 0], expectedOutputs: [0] },
-      { inputs: [0, 1, 1], expectedOutputs: [1] },
-      { inputs: [1, 0, 0], expectedOutputs: [0] },
-      { inputs: [1, 0, 1], expectedOutputs: [1] },
-      { inputs: [1, 1, 0], expectedOutputs: [1] },
-      { inputs: [1, 1, 1], expectedOutputs: [1] },
+    objective: 'Construa o circuito (A AND B) OR C e preencha a tabela verdade.',
+    maxScore: 100,
+    phases: [
+      {
+        type: 'formula_quiz',
+        label: 'Quiz 2ⁿ',
+        formulaQuiz: { numInputs: 3 },
+      },
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'and', 'or', 'led'],
+        testCases: [
+          { inputs: [0, 0, 0], expectedOutputs: [0] },
+          { inputs: [0, 0, 1], expectedOutputs: [1] },
+          { inputs: [0, 1, 0], expectedOutputs: [0] },
+          { inputs: [0, 1, 1], expectedOutputs: [1] },
+          { inputs: [1, 0, 0], expectedOutputs: [0] },
+          { inputs: [1, 0, 1], expectedOutputs: [1] },
+          { inputs: [1, 1, 0], expectedOutputs: [1] },
+          { inputs: [1, 1, 1], expectedOutputs: [1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B', 'C'],
+          outputLabels: ['(A∧B)∨C'],
+          rows: [
+            { inputs: [0, 0, 0], outputs: [0] },
+            { inputs: [0, 0, 1], outputs: [1] },
+            { inputs: [0, 1, 0], outputs: [0] },
+            { inputs: [0, 1, 1], outputs: [1] },
+            { inputs: [1, 0, 0], outputs: [0] },
+            { inputs: [1, 0, 1], outputs: [1] },
+            { inputs: [1, 1, 0], outputs: [1] },
+            { inputs: [1, 1, 1], outputs: [1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'circuit',
   },
+  // === Level 10: Combinational (A OR B) AND C ===
   {
-    id: 15,
-    title: 'Tabela 3 Entradas',
-    description: 'Preencha (A AND B) OR C',
-    objective: 'Complete a Tabela Verdade de 8 linhas para o circuito (A AND B) OR C.',
-    availableComponents: [],
-    testCases: [],
+    id: 10,
+    title: 'Combinacional 2',
+    description: '(A OR B) AND C',
+    objective: 'Construa o circuito (A OR B) AND C e preencha a tabela verdade.',
     maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A', 'B', 'C'],
-      outputLabels: ['(A∧B)∨C'],
-      rows: [
-        { inputs: [0, 0, 0], outputs: [0] },
-        { inputs: [0, 0, 1], outputs: [1] },
-        { inputs: [0, 1, 0], outputs: [0] },
-        { inputs: [0, 1, 1], outputs: [1] },
-        { inputs: [1, 0, 0], outputs: [0] },
-        { inputs: [1, 0, 1], outputs: [1] },
-        { inputs: [1, 1, 0], outputs: [1] },
-        { inputs: [1, 1, 1], outputs: [1] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
-    },
-  },
-  {
-    id: 16,
-    title: 'Interprete Combinacional',
-    description: 'Monte (A OR B) AND C',
-    objective: 'A Tabela Verdade descreve (A OR B) AND C. Monte o circuito correspondente.',
-    availableComponents: ['toggleSwitch', 'and', 'or', 'led'],
-    testCases: [
-      { inputs: [0, 0, 0], expectedOutputs: [0] },
-      { inputs: [0, 0, 1], expectedOutputs: [0] },
-      { inputs: [0, 1, 0], expectedOutputs: [0] },
-      { inputs: [0, 1, 1], expectedOutputs: [1] },
-      { inputs: [1, 0, 0], expectedOutputs: [0] },
-      { inputs: [1, 0, 1], expectedOutputs: [1] },
-      { inputs: [1, 1, 0], expectedOutputs: [0] },
-      { inputs: [1, 1, 1], expectedOutputs: [1] },
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'and', 'or', 'led'],
+        testCases: [
+          { inputs: [0, 0, 0], expectedOutputs: [0] },
+          { inputs: [0, 0, 1], expectedOutputs: [0] },
+          { inputs: [0, 1, 0], expectedOutputs: [0] },
+          { inputs: [0, 1, 1], expectedOutputs: [1] },
+          { inputs: [1, 0, 0], expectedOutputs: [0] },
+          { inputs: [1, 0, 1], expectedOutputs: [1] },
+          { inputs: [1, 1, 0], expectedOutputs: [0] },
+          { inputs: [1, 1, 1], expectedOutputs: [1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B', 'C'],
+          outputLabels: ['(A∨B)∧C'],
+          rows: [
+            { inputs: [0, 0, 0], outputs: [0] },
+            { inputs: [0, 0, 1], outputs: [0] },
+            { inputs: [0, 1, 0], outputs: [0] },
+            { inputs: [0, 1, 1], outputs: [1] },
+            { inputs: [1, 0, 0], outputs: [0] },
+            { inputs: [1, 0, 1], outputs: [1] },
+            { inputs: [1, 1, 0], outputs: [0] },
+            { inputs: [1, 1, 1], outputs: [1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'interpret_table',
-    truthTable: {
-      inputLabels: ['A', 'B', 'C'],
-      outputLabels: ['Saída'],
-      rows: [
-        { inputs: [0, 0, 0], outputs: [0] },
-        { inputs: [0, 0, 1], outputs: [0] },
-        { inputs: [0, 1, 0], outputs: [0] },
-        { inputs: [0, 1, 1], outputs: [1] },
-        { inputs: [1, 0, 0], outputs: [0] },
-        { inputs: [1, 0, 1], outputs: [1] },
-        { inputs: [1, 1, 0], outputs: [0] },
-        { inputs: [1, 1, 1], outputs: [1] },
-      ],
-    },
   },
-  // === ADVANCED: Half-Adder and Full-Adder ===
+  // === Level 11: Half-Adder ===
   {
-    id: 17,
+    id: 11,
     title: 'Meio-Somador',
     description: 'Half-Adder',
-    objective: 'Construa um Meio-Somador: Soma = A XOR B, Carry = A AND B. Use 2 LEDs (Soma em cima, Carry embaixo).',
-    availableComponents: ['toggleSwitch', 'xor', 'and', 'led'],
-    testCases: [
-      { inputs: [0, 0], expectedOutputs: [0, 0] },
-      { inputs: [0, 1], expectedOutputs: [1, 0] },
-      { inputs: [1, 0], expectedOutputs: [1, 0] },
-      { inputs: [1, 1], expectedOutputs: [0, 1] },
+    objective: 'Construa um Meio-Somador: Soma = A XOR B, Carry = A AND B.',
+    maxScore: 100,
+    phases: [
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'xor', 'and', 'led'],
+        testCases: [
+          { inputs: [0, 0], expectedOutputs: [0, 0] },
+          { inputs: [0, 1], expectedOutputs: [1, 0] },
+          { inputs: [1, 0], expectedOutputs: [1, 0] },
+          { inputs: [1, 1], expectedOutputs: [0, 1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B'],
+          outputLabels: ['Soma', 'Carry'],
+          rows: [
+            { inputs: [0, 0], outputs: [0, 0] },
+            { inputs: [0, 1], outputs: [1, 0] },
+            { inputs: [1, 0], outputs: [1, 0] },
+            { inputs: [1, 1], outputs: [0, 1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'circuit',
   },
+  // === Level 12: Full-Adder ===
   {
-    id: 18,
-    title: 'Tabela Meio-Somador',
-    description: 'Preencha Soma e Carry',
-    objective: 'Complete a Tabela Verdade do Meio-Somador (Half-Adder) com as colunas Soma e Carry.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['Soma', 'Carry'],
-      rows: [
-        { inputs: [0, 0], outputs: [0, 0] },
-        { inputs: [0, 1], outputs: [1, 0] },
-        { inputs: [1, 0], outputs: [1, 0] },
-        { inputs: [1, 1], outputs: [0, 1] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3],
-    },
-  },
-  {
-    id: 19,
+    id: 12,
     title: 'Somador Completo',
     description: 'Full-Adder',
-    objective: 'Construa um Somador Completo: Soma = A XOR B XOR Cin, Cout = (A AND B) OR (Cin AND (A XOR B)). Use 3 switches e 2 LEDs.',
-    availableComponents: ['toggleSwitch', 'xor', 'and', 'or', 'led'],
-    testCases: [
-      { inputs: [0, 0, 0], expectedOutputs: [0, 0] },
-      { inputs: [0, 0, 1], expectedOutputs: [1, 0] },
-      { inputs: [0, 1, 0], expectedOutputs: [1, 0] },
-      { inputs: [0, 1, 1], expectedOutputs: [0, 1] },
-      { inputs: [1, 0, 0], expectedOutputs: [1, 0] },
-      { inputs: [1, 0, 1], expectedOutputs: [0, 1] },
-      { inputs: [1, 1, 0], expectedOutputs: [0, 1] },
-      { inputs: [1, 1, 1], expectedOutputs: [1, 1] },
+    objective: 'Construa um Somador Completo com 3 entradas e 2 saídas (Soma e Cout).',
+    maxScore: 100,
+    phases: [
+      {
+        type: 'formula_quiz',
+        label: 'Quiz 2ⁿ',
+        formulaQuiz: { numInputs: 3 },
+      },
+      {
+        type: 'circuit',
+        label: 'Circuito',
+        availableComponents: ['toggleSwitch', 'xor', 'and', 'or', 'led'],
+        testCases: [
+          { inputs: [0, 0, 0], expectedOutputs: [0, 0] },
+          { inputs: [0, 0, 1], expectedOutputs: [1, 0] },
+          { inputs: [0, 1, 0], expectedOutputs: [1, 0] },
+          { inputs: [0, 1, 1], expectedOutputs: [0, 1] },
+          { inputs: [1, 0, 0], expectedOutputs: [1, 0] },
+          { inputs: [1, 0, 1], expectedOutputs: [0, 1] },
+          { inputs: [1, 1, 0], expectedOutputs: [0, 1] },
+          { inputs: [1, 1, 1], expectedOutputs: [1, 1] },
+        ],
+      },
+      {
+        type: 'fill_table',
+        label: 'Tabela Verdade',
+        truthTable: {
+          inputLabels: ['A', 'B', 'Cin'],
+          outputLabels: ['Soma', 'Cout'],
+          rows: [
+            { inputs: [0, 0, 0], outputs: [0, 0] },
+            { inputs: [0, 0, 1], outputs: [1, 0] },
+            { inputs: [0, 1, 0], outputs: [1, 0] },
+            { inputs: [0, 1, 1], outputs: [0, 1] },
+            { inputs: [1, 0, 0], outputs: [1, 0] },
+            { inputs: [1, 0, 1], outputs: [0, 1] },
+            { inputs: [1, 1, 0], outputs: [0, 1] },
+            { inputs: [1, 1, 1], outputs: [1, 1] },
+          ],
+          hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+        },
+      },
     ],
-    maxScore: 100,
-    challengeType: 'circuit',
   },
+  // === Level 13: Binary 3 bits ===
   {
-    id: 20,
-    title: 'Tabela Full-Adder',
-    description: 'Preencha o Somador Completo',
-    objective: 'Complete a Tabela Verdade do Somador Completo (Full-Adder) com Soma e Cout.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    truthTable: {
-      inputLabels: ['A', 'B', 'Cin'],
-      outputLabels: ['Soma', 'Cout'],
-      rows: [
-        { inputs: [0, 0, 0], outputs: [0, 0] },
-        { inputs: [0, 0, 1], outputs: [1, 0] },
-        { inputs: [0, 1, 0], outputs: [1, 0] },
-        { inputs: [0, 1, 1], outputs: [0, 1] },
-        { inputs: [1, 0, 0], outputs: [1, 0] },
-        { inputs: [1, 0, 1], outputs: [0, 1] },
-        { inputs: [1, 1, 0], outputs: [0, 1] },
-        { inputs: [1, 1, 1], outputs: [1, 1] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
-    },
-  },
-  // === NEW: Waveform challenges ===
-  {
-    id: 21,
-    title: 'Onda AND',
-    description: 'Análise de tempo',
-    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta AND.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'waveform',
-    waveform: {
-      gate: 'AND',
-      timeSteps: 8,
-      inputA: [0, 0, 1, 1, 0, 1, 1, 0],
-      inputB: [0, 1, 0, 1, 1, 1, 0, 0],
-      expectedOutput: [0, 0, 0, 1, 0, 1, 0, 0],
-    },
-  },
-  {
-    id: 22,
-    title: 'Onda OR',
-    description: 'Análise de tempo',
-    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta OR.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'waveform',
-    waveform: {
-      gate: 'OR',
-      timeSteps: 8,
-      inputA: [0, 0, 1, 1, 0, 1, 1, 0],
-      inputB: [0, 1, 0, 1, 1, 1, 0, 0],
-      expectedOutput: [0, 1, 1, 1, 1, 1, 1, 0],
-    },
-  },
-  {
-    id: 23,
-    title: 'Onda XOR',
-    description: 'Análise de tempo avançada',
-    objective: 'Observe as formas de onda de A e B e desenhe a saída da porta XOR.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'waveform',
-    waveform: {
-      gate: 'XOR',
-      timeSteps: 8,
-      inputA: [0, 1, 1, 0, 1, 0, 0, 1],
-      inputB: [0, 0, 1, 1, 1, 0, 1, 1],
-      expectedOutput: [0, 1, 0, 1, 0, 0, 1, 0],
-    },
-  },
-  // === NEW: Bit weight challenges ===
-  {
-    id: 24,
+    id: 13,
     title: 'Binário: 3 bits',
     description: 'Conversão rápida',
-    objective: 'Represente o número decimal 5 usando 3 chaves (bits).',
-    availableComponents: [],
-    testCases: [],
+    objective: 'Represente o número decimal 5 usando 3 bits.',
     maxScore: 100,
-    challengeType: 'bit_weight',
-    bitWeight: { targetDecimal: 5, numBits: 3 },
+    phases: [
+      {
+        type: 'bit_weight',
+        label: 'Peso de Bits',
+        bitWeight: { targetDecimal: 5, numBits: 3 },
+      },
+    ],
   },
+  // === Level 14: Binary 4 bits ===
   {
-    id: 25,
+    id: 14,
     title: 'Binário: 4 bits',
     description: 'Conversão rápida',
-    objective: 'Represente o número decimal 11 usando 4 chaves (bits).',
-    availableComponents: [],
-    testCases: [],
+    objective: 'Represente o número decimal 11 usando 4 bits.',
     maxScore: 100,
-    challengeType: 'bit_weight',
-    bitWeight: { targetDecimal: 11, numBits: 4 },
+    phases: [
+      {
+        type: 'bit_weight',
+        label: 'Peso de Bits',
+        bitWeight: { targetDecimal: 11, numBits: 4 },
+      },
+    ],
   },
+  // === Level 15: Binary 5 bits ===
   {
-    id: 26,
+    id: 15,
     title: 'Binário: 5 bits',
     description: 'Conversão avançada',
-    objective: 'Represente o número decimal 23 usando 5 chaves (bits).',
-    availableComponents: [],
-    testCases: [],
+    objective: 'Represente o número decimal 23 usando 5 bits.',
     maxScore: 100,
-    challengeType: 'bit_weight',
-    bitWeight: { targetDecimal: 23, numBits: 5 },
-  },
-  // === Levels with formula quiz gates ===
-  {
-    id: 27,
-    title: 'Quiz + Tabela NAND',
-    description: 'Fórmula 2^n + Tabela',
-    objective: 'Responda quantas combinações existem para 2 entradas, depois preencha a Tabela NAND.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    formulaQuiz: { numInputs: 2 },
-    truthTable: {
-      inputLabels: ['A', 'B'],
-      outputLabels: ['NAND'],
-      rows: [
-        { inputs: [0, 0], outputs: [1] },
-        { inputs: [0, 1], outputs: [1] },
-        { inputs: [1, 0], outputs: [1] },
-        { inputs: [1, 1], outputs: [0] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3],
-    },
-  },
-  {
-    id: 28,
-    title: 'Quiz + Tabela 3 Entradas',
-    description: 'Fórmula 2^n + Tabela',
-    objective: 'Responda quantas combinações existem para 3 entradas, depois preencha a Tabela.',
-    availableComponents: [],
-    testCases: [],
-    maxScore: 100,
-    challengeType: 'fill_table',
-    formulaQuiz: { numInputs: 3 },
-    truthTable: {
-      inputLabels: ['A', 'B', 'C'],
-      outputLabels: ['(A∨B)∧C'],
-      rows: [
-        { inputs: [0, 0, 0], outputs: [0] },
-        { inputs: [0, 0, 1], outputs: [0] },
-        { inputs: [0, 1, 0], outputs: [0] },
-        { inputs: [0, 1, 1], outputs: [1] },
-        { inputs: [1, 0, 0], outputs: [0] },
-        { inputs: [1, 0, 1], outputs: [1] },
-        { inputs: [1, 1, 0], outputs: [0] },
-        { inputs: [1, 1, 1], outputs: [1] },
-      ],
-      hiddenOutputIndices: [0, 1, 2, 3, 4, 5, 6, 7],
-    },
+    phases: [
+      {
+        type: 'bit_weight',
+        label: 'Peso de Bits',
+        bitWeight: { targetDecimal: 23, numBits: 5 },
+      },
+    ],
   },
 ];
