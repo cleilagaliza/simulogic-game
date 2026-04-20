@@ -44,7 +44,6 @@ O projeto é gerenciado seguindo as fases do Guia PMBOK, com execução entre Ma
 * MARCOS WDSON DOS SANTOS SOUSA - Responsável Técnico
 * LUIZ RICARDO BOTTI TABORDA MACEDO - Design de Interface
 * JOSUEL PINHEIRO BARROS JUNIOR - Testes e Controle de Qualidade
-* ANDRE FELIPE RODRIGUES AVELAR - Testes e Controle de Qualidade
 
 
 ---
