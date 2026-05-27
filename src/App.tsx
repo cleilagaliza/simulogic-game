@@ -10,6 +10,7 @@ import Sandbox from "./pages/Sandbox";
 import Ranking from "./pages/Ranking";
 import Encyclopedia from "./pages/Encyclopedia";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 
@@ -30,6 +31,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
           <Route path="/levels" element={<ProtectedRoute><LevelMap /></ProtectedRoute>} />
           <Route path="/game/:levelId" element={<ProtectedRoute><Game /></ProtectedRoute>} />
