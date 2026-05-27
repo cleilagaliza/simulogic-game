@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+type Mode = 'login' | 'signup' | 'forgot';
+
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -18,12 +20,12 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Login realizado com sucesso!');
         navigate('/');
-      } else {
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -34,6 +36,13 @@ const Auth = () => {
         });
         if (error) throw error;
         toast.success('Conta criada! Verifique seu email para confirmar.');
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success('Link de recuperação enviado! Verifique seu email.');
+        setMode('login');
       }
     } catch (error: any) {
       toast.error(error.message || 'Erro na autenticação');
@@ -42,18 +51,23 @@ const Auth = () => {
     }
   };
 
+  const subtitle =
+    mode === 'login'
+      ? 'Entre na sua conta'
+      : mode === 'signup'
+      ? 'Crie sua conta'
+      : 'Recuperar senha';
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm mx-auto p-8 rounded-xl border border-border bg-card shadow-lg">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-foreground">⚡ Logic Simulator</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isLogin ? 'Entre na sua conta' : 'Crie sua conta'}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {!isLogin && (
+          {mode === 'signup' && (
             <Input
               placeholder="Nome de exibição"
               value={displayName}
@@ -67,27 +81,70 @@ const Auth = () => {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <Input
-            type="password"
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-          />
+          {mode !== 'forgot' && (
+            <>
+              <Input
+                type="password"
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              {mode === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => setMode('forgot')}
+                  className="text-xs text-primary hover:underline font-medium self-end -mt-2"
+                >
+                  Esqueceu sua senha?
+                </button>
+              )}
+            </>
+          )}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar conta'}
+            {loading
+              ? 'Carregando...'
+              : mode === 'login'
+              ? 'Entrar'
+              : mode === 'signup'
+              ? 'Criar conta'
+              : 'Enviar link de recuperação'}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-4">
-          {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:underline font-medium"
-          >
-            {isLogin ? 'Criar conta' : 'Fazer login'}
-          </button>
+          {mode === 'forgot' ? (
+            <>
+              Lembrou sua senha?{' '}
+              <button
+                onClick={() => setMode('login')}
+                className="text-primary hover:underline font-medium"
+              >
+                Fazer login
+              </button>
+            </>
+          ) : mode === 'login' ? (
+            <>
+              Não tem conta?{' '}
+              <button
+                onClick={() => setMode('signup')}
+                className="text-primary hover:underline font-medium"
+              >
+                Criar conta
+              </button>
+            </>
+          ) : (
+            <>
+              Já tem conta?{' '}
+              <button
+                onClick={() => setMode('login')}
+                className="text-primary hover:underline font-medium"
+              >
+                Fazer login
+              </button>
+            </>
+          )}
         </p>
       </div>
     </div>
