@@ -173,12 +173,15 @@ const Game = () => {
     setCurrentPhaseIdx(prev => prev + 1);
   };
 
+  const currentIdx = levels.findIndex(l => l.id === level.id);
+  const nextLevelObj = currentIdx >= 0 && currentIdx < levels.length - 1 ? levels[currentIdx + 1] : null;
+  const isLastLevel = !nextLevelObj;
+
   const handleNext = () => {
-    const nextLevel = level.id + 1;
     setShowModal(false);
     setResult(null);
-    if (nextLevel < levels.length) {
-      navigate(`/game/${nextLevel}`);
+    if (nextLevelObj) {
+      navigate(`/game/${nextLevelObj.id}`);
     } else {
       toast.success('Parabéns! Você completou todos os níveis!');
       navigate('/levels');
@@ -318,7 +321,7 @@ const Game = () => {
               Voltar
             </Button>
             <Button size="sm" onClick={handleNext}>
-              Próximo <ArrowRight size={14} />
+              {isLastLevel ? 'Concluir' : (<>Próximo <ArrowRight size={14} /></>)}
             </Button>
           </DialogFooter>
         </DialogContent>
