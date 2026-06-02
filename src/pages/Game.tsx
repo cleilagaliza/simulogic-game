@@ -321,7 +321,7 @@ const Game = () => {
               Voltar
             </Button>
             <Button size="sm" onClick={handleNext}>
-              Próximo <ArrowRight size={14} />
+              {isLastLevel ? 'Concluir' : (<>Próximo <ArrowRight size={14} /></>)}
             </Button>
           </DialogFooter>
         </DialogContent>
