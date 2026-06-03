@@ -182,8 +182,23 @@ const Game = () => {
   const handleQuizCorrect = () => {
     const newResults = { ...phaseResults, [currentPhaseIdx]: true };
     setPhaseResults(newResults);
-    toast.success('Quiz correto! Avançando...');
-    setCurrentPhaseIdx(prev => prev + 1);
+
+    if (isLastPhase) {
+      const finalStars = attemptCount === 0 ? 3 : attemptCount === 1 ? 2 : 1;
+      const finalResult: VerifyResult = {
+        passed: 1,
+        total: 1,
+        score: finalStars * 33 + (finalStars === 3 ? 1 : 0),
+        stars: finalStars,
+        success: true,
+      };
+      setResult(finalResult);
+      if (!isTraining) saveScore(finalResult);
+      setShowModal(true);
+    } else {
+      toast.success('Quiz correto! Avançando...');
+      setCurrentPhaseIdx(prev => prev + 1);
+    }
   };
 
   const currentIdx = levels.findIndex(l => l.id === level.id);
@@ -210,6 +225,7 @@ const Game = () => {
           <FormulaQuiz
             numInputs={currentPhase.formulaQuiz.numInputs}
             onCorrect={handleQuizCorrect}
+            onIncorrect={() => setAttemptCount(prev => prev + 1)}
           />
         </div>
       </div>
