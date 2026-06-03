@@ -42,6 +42,7 @@ const Game = () => {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
 
   const level = levels.find(l => l.id === Number(levelId));
 
@@ -51,6 +52,7 @@ const Game = () => {
     setIsTraining(false);
     setCurrentPhaseIdx(0);
     setPhaseResults({});
+    setAttemptCount(0);
   }, [levelId]);
 
   useEffect(() => {
@@ -114,6 +116,7 @@ const Game = () => {
       const res = verifyCircuit(nodes, edges, currentPhase.testCases || []);
       ok = res.success;
       if (!ok) {
+        setAttemptCount(prev => prev + 1);
         setResult(res);
         return;
       }
@@ -122,6 +125,7 @@ const Game = () => {
     if (currentPhase.type === 'fill_table' && tableRef.current) {
       ok = tableRef.current.verify();
       if (!ok) {
+        setAttemptCount(prev => prev + 1);
         toast.error('Tabela Verdade incorreta. Tente novamente!');
         return;
       }
@@ -130,6 +134,7 @@ const Game = () => {
     if (currentPhase.type === 'waveform' && waveformRef.current) {
       ok = waveformRef.current.verify();
       if (!ok) {
+        setAttemptCount(prev => prev + 1);
         toast.error('Forma de onda incorreta. Tente novamente!');
         return;
       }
@@ -138,6 +143,7 @@ const Game = () => {
     if (currentPhase.type === 'bit_weight' && bitWeightRef.current) {
       ok = bitWeightRef.current.verify();
       if (!ok) {
+        setAttemptCount(prev => prev + 1);
         toast.error('Conversão incorreta. Tente novamente!');
         return;
       }
@@ -155,8 +161,15 @@ const Game = () => {
     setResult(null);
 
     if (isLastPhase) {
-      // All phases complete
-      const finalResult: VerifyResult = { passed: 1, total: 1, score: 100, stars: 3, success: true };
+      // All phases complete — calculate stars based on attempts
+      const finalStars = attemptCount === 0 ? 3 : attemptCount === 1 ? 2 : 1;
+      const finalResult: VerifyResult = {
+        passed: 1,
+        total: 1,
+        score: finalStars * 33 + (finalStars === 3 ? 1 : 0), // 100, 67, 34
+        stars: finalStars,
+        success: true,
+      };
       setResult(finalResult);
       if (!isTraining) await saveScore(finalResult);
       setShowModal(true);
@@ -169,8 +182,23 @@ const Game = () => {
   const handleQuizCorrect = () => {
     const newResults = { ...phaseResults, [currentPhaseIdx]: true };
     setPhaseResults(newResults);
-    toast.success('Quiz correto! Avançando...');
-    setCurrentPhaseIdx(prev => prev + 1);
+
+    if (isLastPhase) {
+      const finalStars = attemptCount === 0 ? 3 : attemptCount === 1 ? 2 : 1;
+      const finalResult: VerifyResult = {
+        passed: 1,
+        total: 1,
+        score: finalStars * 33 + (finalStars === 3 ? 1 : 0),
+        stars: finalStars,
+        success: true,
+      };
+      setResult(finalResult);
+      if (!isTraining) saveScore(finalResult);
+      setShowModal(true);
+    } else {
+      toast.success('Quiz correto! Avançando...');
+      setCurrentPhaseIdx(prev => prev + 1);
+    }
   };
 
   const currentIdx = levels.findIndex(l => l.id === level.id);
@@ -197,6 +225,7 @@ const Game = () => {
           <FormulaQuiz
             numInputs={currentPhase.formulaQuiz.numInputs}
             onCorrect={handleQuizCorrect}
+            onIncorrect={() => setAttemptCount(prev => prev + 1)}
           />
         </div>
       </div>

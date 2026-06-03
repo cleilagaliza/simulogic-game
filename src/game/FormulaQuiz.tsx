@@ -5,9 +5,10 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 interface Props {
   numInputs: number;
   onCorrect: () => void;
+  onIncorrect?: () => void;
 }
 
-const FormulaQuiz = ({ numInputs, onCorrect }: Props) => {
+const FormulaQuiz = ({ numInputs, onCorrect, onIncorrect }: Props) => {
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState(false);
 
@@ -18,6 +19,7 @@ const FormulaQuiz = ({ numInputs, onCorrect }: Props) => {
     if (parsed === correctAnswer) {
       onCorrect();
     } else {
+      onIncorrect?.();
       setError(true);
       setTimeout(() => setError(false), 2000);
     }
