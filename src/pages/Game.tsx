@@ -10,6 +10,7 @@ import TruthTableGrid, { type TruthTableGridRef } from '@/game/TruthTableGrid';
 import WaveformChallenge, { type WaveformChallengeRef } from '@/game/WaveformChallenge';
 import BitWeightChallenge, { type BitWeightChallengeRef } from '@/game/BitWeightChallenge';
 import FormulaQuiz from '@/game/FormulaQuiz';
+import PhaseTutorial from '@/game/PhaseTutorial';
 import { CheckCircle2, XCircle, ArrowLeft, Star, ArrowRight, Trophy, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
