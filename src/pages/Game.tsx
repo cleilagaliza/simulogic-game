@@ -52,6 +52,7 @@ const Game = () => {
     setIsTraining(false);
     setCurrentPhaseIdx(0);
     setPhaseResults({});
+    setAttemptCount(0);
   }, [levelId]);
 
   useEffect(() => {
