@@ -221,6 +221,7 @@ const Game = () => {
   if (currentPhase.type === 'formula_quiz' && currentPhase.formulaQuiz) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <PhaseTutorial key={currentPhase.type} phaseType={currentPhase.type} />
         <TopBar level={level} isTraining={isTraining} navigate={navigate} currentPhaseIdx={currentPhaseIdx} phases={phases} />
         <div className="flex-1 flex items-center justify-center p-4">
           <FormulaQuiz
