@@ -245,6 +245,7 @@ const Game = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-background">
+      <PhaseTutorial key={currentPhase.type} phaseType={currentPhase.type} />
       {/* Top bar */}
       <TopBar level={level} isTraining={isTraining} navigate={navigate} currentPhaseIdx={currentPhaseIdx} phases={phases}>
         {hasCircuit && isMobile && (
