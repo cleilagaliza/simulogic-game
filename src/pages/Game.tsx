@@ -42,6 +42,7 @@ const Game = () => {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
 
   const level = levels.find(l => l.id === Number(levelId));
 
