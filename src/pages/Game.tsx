@@ -351,7 +351,7 @@ function TopBar({
       <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => navigate('/levels')}>
         <ArrowLeft size={14} />
       </Button>
-      <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] font-semibold text-primary">Nv.{level.id}</span>
           <span className="text-[10px] text-foreground font-medium truncate">{level.title}</span>
@@ -359,6 +359,9 @@ function TopBar({
             <span className="text-[8px] font-semibold text-primary bg-primary/10 px-1 py-0.5 rounded">TREINO</span>
           )}
         </div>
+        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate" title={level.objective}>
+          {level.objective}
+        </p>
         {/* Phase indicators */}
         {phases.length > 1 && (
           <div className="flex items-center gap-1 mt-0.5">
